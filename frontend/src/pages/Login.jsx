@@ -69,7 +69,7 @@ export default function Login() {
 
             {/* Rules & Guidelines */}
             <div className="pt-2">
-              <div className="flex items-center gap-2.5 mb-3">
+              <div className="flex items-center gap-1.5 mb-3">
                 <h2 className="text-2xl xl:text-3xl font-bold text-rose-600 tracking-tight">Rules & Guidlines</h2>
                 <div className="w-8 h-8 rounded-full bg-emerald-100/90 border border-emerald-300/80 flex items-center justify-center text-base shadow-xs">
                   👨‍💻
@@ -78,33 +78,16 @@ export default function Login() {
 
               <ul className="space-y-2 text-slate-800 text-xs xl:text-sm font-semibold leading-snug max-w-lg">
                 <li className="flex items-start gap-2">
-                  <span className="text-slate-900 font-bold">•</span>
+                  <span className="text-slate-100 font-bold">•</span>
                   <span><strong>Time Limit:</strong> You have exactly 1 hour (60 minutes) to complete the entire competition.</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-slate-900 font-bold">•</span>
-                  <span><strong>11 Total Challenges:</strong> Solve 4 Low, 5 Medium, and 2</span>
-                </li>
-                <li className="pl-4 text-slate-800">
-                  Hard questions worth 5 points each (55 points max).
+                  <span className="text-slate-100 font-bold">•</span>
+                  <span><strong> 25 Total Challenges:</strong> Solve 10 Low, 10 Medium, and 5 Hard Challenges. </span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-slate-900 font-bold">•</span>
-                  <span><strong>Strict Language Lock:</strong> Python questions must be</span>
-                </li>
-                <li className="pl-4 text-slate-800">
-                  solved in Python, and Java questions must be solved in Java.
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-slate-900 font-bold">•</span>
-                  <span><strong>Team Submissions:</strong> Collaborate with your team and</span>
-                </li>
-                <li className="pl-4 text-slate-800">
-                  submit your code directly through the built-in editor.
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-slate-900 font-bold">•</span>
-                  <span><strong>Hidden Scoring:</strong> All code is evaluated against secret test cases, and scores are tracked privately on the admin dashboard</span>
+                  <span className="text-slate-100 font-bold">•</span>
+                  <span><strong>Hidden Scoring:</strong> All code is evaluated against secret test cases, and scores are tracked privately on the admin</span>
                 </li>
               </ul>
             </div>
@@ -188,8 +171,8 @@ export default function Login() {
       {showDisqualifiedModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-slate-900 border border-rose-500/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center flex flex-col items-center gap-4 relative">
-            <button 
-              onClick={() => setShowDisqualifiedModal(false)} 
+            <button
+              onClick={() => setShowDisqualifiedModal(false)}
               className="absolute top-3 right-3 text-slate-400 hover:text-white p-1 rounded-lg"
             >
               <X size={18} />
