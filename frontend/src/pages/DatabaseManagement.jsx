@@ -3,6 +3,8 @@ import axios from 'axios';
 import { Users, Code, Plus, Trash2, Edit2, Save, X, PlusCircle, MinusCircle } from 'lucide-react';
 
 export default function DatabaseManagement() {
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const [activeTab, setActiveTab] = useState('teams');
   
   // Teams State
@@ -26,8 +28,6 @@ export default function DatabaseManagement() {
     if (activeTab === 'challenges') fetchChallenges();
   }, [activeTab]);
 
-  const API_URL = import.meta.env.VITE_API_URL;
-
   const fetchTeams = async () => {
     try {
       const res = await axios.get(
@@ -39,8 +39,6 @@ export default function DatabaseManagement() {
     }
   };
 
-  const API_URL = import.meta.env.VITE_API_URL;
-
   const fetchChallenges = async () => {
     try {
       const res = await axios.get(
@@ -51,7 +49,6 @@ export default function DatabaseManagement() {
       console.error(e);
     }
   };
-  const API_URL = import.meta.env.VITE_API_URL;
 
   // --- Teams Actions ---
   const handleAddTeam = async (e) => {
@@ -73,8 +70,6 @@ export default function DatabaseManagement() {
       alert("Failed to add team");
     }
   };
-
-  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleDeleteTeam = async (id) => {
     if (!window.confirm("Are you sure you want to delete this team?")) return;
@@ -130,8 +125,9 @@ export default function DatabaseManagement() {
     }
   };
 
-  const handleSaveChallenge = async (e) => {
+    const handleSaveChallenge = async (e) => {
     e.preventDefault();
+
     const payload = {
       level: cLevel,
       title: cTitle,
@@ -140,24 +136,25 @@ export default function DatabaseManagement() {
       testCases: JSON.stringify(cTestCases)
     };
 
-  try {
-    if (editingChallenge) {
-      await axios.put(
-        `${API_URL}/api/admin/challenge/${editingChallenge}`,
-        payload
-      );
-    } else {
-      await axios.post(
-        `${API_URL}/api/admin/challenge`,
-        payload
-      );
-    }
+    try {
+      if (editingChallenge) {
+        await axios.put(
+          `${API_URL}/api/admin/challenge/${editingChallenge}`,
+          payload
+        );
+      } else {
+        await axios.post(
+          `${API_URL}/api/admin/challenge`,
+          payload
+        );
+      }
 
-  resetChallengeForm();
-  fetchChallenges();
-} catch (e) {
-  alert("Failed to save challenge");
-}
+      resetChallengeForm();
+      fetchChallenges();
+    } catch (e) {
+      alert("Failed to save challenge");
+    }
+  };
 
   const handleDeleteChallenge = async (id) => {
     if (!window.confirm("Are you sure you want to delete this challenge?")) return;

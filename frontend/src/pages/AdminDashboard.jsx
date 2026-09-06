@@ -4,12 +4,12 @@ import { ChevronDown, ChevronUp, Search, ShieldAlert, CheckCircle, RefreshCw } f
 import { NavLink } from 'react-router-dom';
 
 export default function AdminDashboard() {
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedTeamId, setExpandedTeamId] = useState(null);
-
-const API_URL = import.meta.env.VITE_API_URL;
 
   const fetchLeaderboard = async () => {
     try {
@@ -28,8 +28,6 @@ const API_URL = import.meta.env.VITE_API_URL;
     const interval = setInterval(fetchLeaderboard, 5000);
     return () => clearInterval(interval);
   }, []);
-
-const API_URL = import.meta.env.VITE_API_URL;
 
   const toggleStatus = async (team, e) => {
     e.stopPropagation();
