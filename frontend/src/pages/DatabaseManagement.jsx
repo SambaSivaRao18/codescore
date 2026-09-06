@@ -26,37 +26,68 @@ export default function DatabaseManagement() {
     if (activeTab === 'challenges') fetchChallenges();
   }, [activeTab]);
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchTeams = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/admin/leaderboard');
+      const res = await axios.get(
+        `${API_URL}/api/admin/leaderboard`
+      );
       setTeams(res.data);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   };
+
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const fetchChallenges = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/admin/challenges');
+      const res = await axios.get(
+        `${API_URL}/api/admin/challenges`
+      );
       setChallenges(res.data);
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   };
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // --- Teams Actions ---
   const handleAddTeam = async (e) => {
     e.preventDefault();
+
     try {
-      await axios.post('http://localhost:3000/api/admin/team', { teamName: newTeamName, password: newTeamPassword });
+      await axios.post(
+        `${API_URL}/api/admin/team`,
+        {
+          teamName: newTeamName,
+          password: newTeamPassword
+        }
+      );
+
       setNewTeamName('');
       setNewTeamPassword('');
       fetchTeams();
-    } catch (e) { alert("Failed to add team"); }
+    } catch (e) {
+      alert("Failed to add team");
+    }
   };
+
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const handleDeleteTeam = async (id) => {
     if (!window.confirm("Are you sure you want to delete this team?")) return;
+
     try {
-      await axios.delete(`http://localhost:3000/api/admin/team/${id}`);
+      await axios.delete(
+        `${API_URL}/api/admin/team/${id}`
+      );
+
       fetchTeams();
-    } catch (e) { alert("Failed to delete team"); }
+    } catch (e) {
+      alert("Failed to delete team");
+    }
   };
 
   // --- Challenge Actions ---
@@ -109,25 +140,37 @@ export default function DatabaseManagement() {
       testCases: JSON.stringify(cTestCases)
     };
 
-    try {
-      if (editingChallenge) {
-        await axios.put(`http://localhost:3000/api/admin/challenge/${editingChallenge}`, payload);
-      } else {
-        await axios.post('http://localhost:3000/api/admin/challenge', payload);
-      }
-      resetChallengeForm();
-      fetchChallenges();
-    } catch (e) {
-      alert("Failed to save challenge");
+  try {
+    if (editingChallenge) {
+      await axios.put(
+        `${API_URL}/api/admin/challenge/${editingChallenge}`,
+        payload
+      );
+    } else {
+      await axios.post(
+        `${API_URL}/api/admin/challenge`,
+        payload
+      );
     }
-  };
+
+  resetChallengeForm();
+  fetchChallenges();
+} catch (e) {
+  alert("Failed to save challenge");
+}
 
   const handleDeleteChallenge = async (id) => {
     if (!window.confirm("Are you sure you want to delete this challenge?")) return;
+
     try {
-      await axios.delete(`http://localhost:3000/api/admin/challenge/${id}`);
+      await axios.delete(
+        `${API_URL}/api/admin/challenge/${id}`
+      );
+
       fetchChallenges();
-    } catch (e) { alert("Failed to delete challenge"); }
+    } catch (e) {
+      alert("Failed to delete challenge");
+    }
   };
 
   return (

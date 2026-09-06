@@ -9,9 +9,13 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedTeamId, setExpandedTeamId] = useState(null);
 
+const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchLeaderboard = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/admin/leaderboard');
+      const response = await axios.get(
+        `${API_URL}/api/admin/leaderboard`
+      );
       setLeaderboard(response.data);
     } catch (error) {
       console.error("Failed to fetch leaderboard", error);
@@ -19,19 +23,25 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
-
   useEffect(() => {
     fetchLeaderboard();
     const interval = setInterval(fetchLeaderboard, 5000);
     return () => clearInterval(interval);
   }, []);
 
+const API_URL = import.meta.env.VITE_API_URL;
+
   const toggleStatus = async (team, e) => {
     e.stopPropagation();
+
     try {
-      await axios.put(`http://localhost:3000/api/admin/team/${team.teamID}/status`, {
-        isDisqualified: !team.isDisqualified
-      });
+      await axios.put(
+        `${API_URL}/api/admin/team/${team.teamID}/status`,
+        {
+          isDisqualified: !team.isDisqualified
+        }
+      );
+
       fetchLeaderboard();
     } catch (error) {
       console.error("Failed to update status", error);

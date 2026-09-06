@@ -4,7 +4,7 @@ import axios from 'axios';
 import Editor from '@monaco-editor/react';
 import { Play, Send, AlertTriangle, CheckCircle2, XCircle, LogOut, Trash2, Check, X, ChevronRight, ChevronLeft, Lock, Unlock, RotateCcw, Info, Trophy, Clock } from 'lucide-react';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 export default function Playground() {
   const navigate = useNavigate();
