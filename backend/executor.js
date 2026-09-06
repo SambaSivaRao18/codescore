@@ -4,7 +4,7 @@ const os = require('os');
 const { spawn, execFile } = require('child_process');
 
 const SUPPORTED_LANGUAGES = ['python', 'java', 'c'];
-const DEFAULT_TIMEOUT_MS = 5000; // 5 seconds
+const DEFAULT_TIMEOUT_MS = 2000; // 2 seconds
 const MAX_BUFFER_BYTES = 256 * 1024; // 256 KB
 const MAX_CODE_SIZE_BYTES = 64 * 1024; // 64 KB
 
