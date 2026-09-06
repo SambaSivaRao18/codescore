@@ -1,14 +1,26 @@
+require('dotenv').config();
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.resolve(__dirname, 'competition.db');
+// On Render, use DB_PATH env var if set, otherwise default to local file.
+// NOTE: Render's filesystem is ephemeral — data resets on redeploy unless
+// you use a Render Disk or an external DB. DB_PATH lets you mount a persistent disk.
+const dbPath = process.env.DB_PATH
+  ? path.resolve(process.env.DB_PATH)
+  : path.resolve(__dirname, 'competition.db');
+
+console.log(`[DB] Using database at: ${dbPath}`);
+
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error opening database', err.message);
   } else {
     console.log('Connected to the SQLite database.');
-    
+
     db.serialize(() => {
+      // Enable WAL mode for better concurrency
+      db.run('PRAGMA journal_mode=WAL');
+
       // Create Team Table
       db.run(`CREATE TABLE IF NOT EXISTS Team (
         teamID INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +45,6 @@ const db = new sqlite3.Database(dbPath, (err) => {
         testCases TEXT NOT NULL,
         questionNumber INTEGER
       )`, () => {
-        // Migration: Add questionNumber to existing table if it doesn't exist
         db.run(`ALTER TABLE Challenges ADD COLUMN questionNumber INTEGER`, (err) => {
           // Ignore error if column already exists
         });

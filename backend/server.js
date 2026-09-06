@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -5,7 +7,27 @@ const db = require('./database');
 const { executeCode, SUPPORTED_LANGUAGES } = require('./executor');
 
 const app = express();
-app.use(cors());
+
+// ── CORS ───────────────────────────────────────────────────────────────────────
+// On Render, FRONTEND_URL must be set to your frontend's Render URL,
+// e.g. https://codescore-frontend.onrender.com
+// Locally it falls back to localhost:5173.
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:5173',
+  'http://localhost:3000',
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, server-to-server)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error(`CORS: origin ${origin} not allowed`));
+  },
+  credentials: true,
+}));
+
 app.use(bodyParser.json({ limit: '1mb' }));
 
 const PORT = process.env.PORT || 3000;
