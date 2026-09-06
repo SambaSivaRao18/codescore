@@ -11,13 +11,21 @@ export default function Login() {
   const [showDisqualifiedModal, setShowDisqualifiedModal] = useState(false);
   const navigate = useNavigate();
 
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+
     try {
-      const response = await axios.post('http://localhost:3000/api/login', { teamName, password });
+      const response = await axios.post(
+        `${API_URL}/api/login`,
+        { teamName, password }
+      );
+
       localStorage.setItem('teamID', response.data.teamID);
       localStorage.setItem('teamName', response.data.teamName);
+
       navigate('/playground');
     } catch (err) {
       if (err.response?.data?.isDisqualified || err.response?.status === 403) {
