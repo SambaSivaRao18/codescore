@@ -1,0 +1,16 @@
+# Exclude local node_modules — npm ci installs fresh ones inside Docker
+node_modules
+
+# Exclude local SQLite DB — it will be created fresh inside the container
+competition.db
+
+# Exclude dev/editor files
+.env
+.env.*
+.gitignore
+*.log
+npm-debug.log*
+
+# Exclude git history
+.git
+.gitignore
