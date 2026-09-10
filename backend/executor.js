@@ -1,7 +1,9 @@
 const fs = require('fs').promises;
 const path = require('path');
 const os = require('os');
-const { spawn, execFile } = require('child_process');
+const { spawn } = require('child_process');
+const https = require('https');
+const http = require('http');
 
 const SUPPORTED_LANGUAGES = ['python', 'java', 'c'];
 const DEFAULT_TIMEOUT_MS = 2000; // 2 seconds
@@ -94,6 +96,58 @@ function runProcess(cmd, args, options = {}) {
       child.stdin.write(stdin);
       child.stdin.end();
     }
+  });
+}
+
+/**
+ * Call the remote Java executor Docker service via HTTP
+ * JAVA_EXECUTOR_URL env var must point to the Render Docker service URL
+ * e.g. https://java-executor.onrender.com
+ */
+function callJavaExecutor(code, stdin, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const executorUrl = process.env.JAVA_EXECUTOR_URL;
+    if (!executorUrl) {
+      return resolve({ error: 'JAVA_EXECUTOR_URL is not set. Java execution is unavailable.' });
+    }
+
+    const body = JSON.stringify({ code, stdin, timeoutMs });
+    const url = new URL('/execute', executorUrl);
+    const isHttps = url.protocol === 'https:';
+    const lib = isHttps ? https : http;
+
+    const options = {
+      hostname: url.hostname,
+      port: url.port || (isHttps ? 443 : 80),
+      path: url.pathname,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+      timeout: timeoutMs + 8000, // extra buffer for network + compile time
+    };
+
+    const req = lib.request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          resolve({ error: 'Invalid response from Java executor service' });
+        }
+      });
+    });
+
+    req.on('error', (err) => resolve({ error: `Java executor unreachable: ${err.message}` }));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({ error: 'Java executor service timed out' });
+    });
+
+    req.write(body);
+    req.end();
   });
 }
 
@@ -198,39 +252,11 @@ async function executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TIM
     }
 
     if (language === 'java') {
-      const srcPath = path.join(tempDir, 'Main.java');
-      await fs.writeFile(srcPath, code, 'utf8');
-
-      // Compile with javac
-      const compileRes = await runProcess('javac', ['Main.java'], { cwd: tempDir, env: cleanEnv, timeout: 10000 });
-      if (compileRes.error) {
-        if (compileRes.error.code === 'ENOENT') {
-          return { error: 'Java compiler (javac) is not installed on the server.' };
-        }
-        return { compileError: `Compilation error: ${compileRes.error.message}` };
-      }
-      if (compileRes.code !== 0) {
-        return { compileError: compileRes.stderr || compileRes.stdout || 'Compilation failed' };
-      }
-
-      // Execute with java
-      const execRes = await runProcess('java', ['-cp', '.', 'Main'], { cwd: tempDir, stdin, env: cleanEnv, timeout: timeoutMs });
-
-      if (execRes.error) {
-        return { error: `Runtime execution error: ${execRes.error.message}` };
-      }
-      if (execRes.isTimeout) {
-        return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
-      }
-      if (execRes.isExceededBuffer) {
-        return { error: `Output Limit Exceeded (max ${MAX_BUFFER_BYTES / 1024} KB)` };
-      }
-
-      return {
-        stdout: execRes.stdout,
-        stderr: execRes.stderr,
-        exitCode: execRes.code,
-      };
+      // Java is handled by the remote Docker microservice (java-executor)
+      // This keeps the Node.js backend on Render's Node runtime (no Docker needed here)
+      // so the SQLite database persists normally between restarts.
+      const result = await callJavaExecutor(code, stdin, timeoutMs);
+      return result;
     }
   } finally {
     // Guaranteed cleanup of isolated directory
