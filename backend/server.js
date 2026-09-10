@@ -118,6 +118,30 @@ setInterval(() => {
 }, 5000);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Java Executor Keep-Alive (Runs every 10 minutes)
+// Pings the java-executor Docker service so it never sleeps on Render free tier.
+// Prevents cold-start delays when students run Java code during the competition.
+// ─────────────────────────────────────────────────────────────────────────────
+const JAVA_EXECUTOR_URL = process.env.JAVA_EXECUTOR_URL;
+if (JAVA_EXECUTOR_URL) {
+  const pingJavaExecutor = () => {
+    const url = new URL('/health', JAVA_EXECUTOR_URL);
+    const lib = url.protocol === 'https:' ? require('https') : require('http');
+    const req = lib.get(url.toString(), (res) => {
+      console.log(`[Java Keep-Alive] java-executor ping: ${res.statusCode}`);
+    });
+    req.on('error', (err) => {
+      console.warn(`[Java Keep-Alive] ping failed: ${err.message}`);
+    });
+    req.setTimeout(5000, () => req.destroy());
+  };
+  // Initial ping on startup
+  pingJavaExecutor();
+  // Ping every 10 minutes to prevent cold start
+  setInterval(pingJavaExecutor, 10 * 60 * 1000);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Authentication & Heartbeat & Disqualification
 // ─────────────────────────────────────────────────────────────────────────────
 app.post('/api/login', (req, res) => {

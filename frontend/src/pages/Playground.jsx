@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
@@ -72,6 +72,12 @@ export default function Playground() {
     }
     setTeamName(localStorage.getItem('teamName') || 'Team');
     fetchQuestionsAndChallenge();
+
+    // Pre-warm the Java executor Docker service on page load.
+    // Render free-tier services sleep after inactivity. By pinging /api/runtimes
+    // immediately when the page loads, we wake the java-executor early so
+    // Java code doesn't have a long cold-start delay when students submit.
+    fetch(`${API_BASE}/runtimes`).catch(() => {});
 
     const heartbeat = setInterval(async () => {
       try {
@@ -577,8 +583,14 @@ export default function Playground() {
                 language={language === 'c' ? 'cpp' : language}
                 theme="vs-dark"
                 value={code}
-                onMount={(editor) => {
+                onMount={(editor, monaco) => {
                   editorRef.current = editor;
+                  // Fix cursor misalignment: remeasure fonts after JetBrains Mono loads.
+                  // Monaco calculates cursor position on init — if the font isn't fully
+                  // loaded yet, cursor appears offset from the actual character position.
+                  document.fonts.ready.then(() => {
+                    monaco.editor.remeasureFonts();
+                  });
                 }}
                 onChange={(val) => {
                   if (val !== undefined && val !== code) {
@@ -589,6 +601,7 @@ export default function Playground() {
                   minimap: { enabled: false },
                   fontSize: 14,
                   fontFamily: "'JetBrains Mono', monospace",
+                  fontLigatures: true,
                   scrollBeyondLastLine: false,
                   roundedSelection: true,
                   padding: { top: 12, bottom: 12 },
