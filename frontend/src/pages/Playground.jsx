@@ -3,10 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Editor from '@monaco-editor/react';
 import { Play, Send, AlertTriangle, CheckCircle2, XCircle, LogOut, Trash2, Check, X, ChevronRight, ChevronLeft, Lock, Unlock, RotateCcw, Info, Trophy, Clock } from 'lucide-react';
+import Confetti from 'react-confetti';
+import { useWindowSize } from 'react-use';
 
 const API_BASE = `${import.meta.env.VITE_API_URL}/api`;
 
 export default function Playground() {
+  const { width, height } = useWindowSize();
   const navigate = useNavigate();
   const [teamName, setTeamName] = useState('');
   const [questions, setQuestions] = useState([]);
@@ -103,13 +106,13 @@ export default function Playground() {
       setShowDisqualifiedModal(true);
     };
 
-    // 10-second window minimize / tab hidden detection
+    // 3-second window minimize / tab hidden detection
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         if (!blurTimerRef.current) {
           blurTimerRef.current = setTimeout(() => {
             triggerDisqualification();
-          }, 10000); // 10 seconds limit
+          }, 3000);
         }
       } else if (document.visibilityState === 'visible') {
         if (blurTimerRef.current) {
@@ -123,7 +126,7 @@ export default function Playground() {
       if (!blurTimerRef.current) {
         blurTimerRef.current = setTimeout(() => {
           triggerDisqualification();
-        }, 10000);
+        }, 3000);
       }
     };
 
@@ -284,13 +287,13 @@ export default function Playground() {
           if (isLastQuestion) {
             setShowCompletionModal(true);
           } else {
-            // Automatically advance to the next level question after 3 seconds
+            // Automatically advance to the next level question after 1 second
             const nextQ = updatedQs[currentIdx + 1];
             if (nextQ && nextQ.status !== 'locked') {
               await loadChallenge(nextQ.questionId);
             }
           }
-        }, 3000);
+        }, 1000);
       } else {
         setStatusText('Wrong Answer');
       }
@@ -884,6 +887,36 @@ export default function Playground() {
               className="w-full py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-lg shadow-blue-900/40 transition-all active:scale-[0.98] mt-2"
             >
               Back to Login Page
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 animate-in fade-in zoom-in duration-200">
+          <div className="bg-slate-900 border border-emerald-500/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center flex flex-col items-center gap-4 relative overflow-hidden z-10">
+            <div className="absolute inset-0 pointer-events-none">
+              <Confetti width={384} height={300} recycle={false} numberOfPieces={250} />
+            </div>
+            <div className="w-14 h-14 bg-emerald-500/20 rounded-full flex items-center justify-center border border-emerald-500/40 text-emerald-400 shadow-lg shadow-emerald-950/50 relative z-10">
+              <CheckCircle2 size={32} />
+            </div>
+
+            <div>
+              <h3 className="text-lg font-black text-white uppercase tracking-wide">
+                Congratulations!
+              </h3>
+              <p className="text-xs text-emerald-300 mt-2 leading-relaxed font-medium">
+                Your code is correct and all test cases passed!
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-emerald-900/30 transition-all active:scale-[0.98] mt-2"
+            >
+              OK
             </button>
           </div>
         </div>

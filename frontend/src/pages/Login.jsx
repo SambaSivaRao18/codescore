@@ -72,7 +72,7 @@ export default function Login() {
 
             {/* Description Paragraph */}
             <p className="text-slate-800 font-semibold text-base xl:text-lg leading-relaxed max-w-lg">
-              CodeScore is a coding platform design to test problem-solving under pressure. Solve <span className="text-emerald-600 font-bold">low</span>, <span className="text-amber-500 font-bold">medium</span>, and <span className="text-rose-600 font-bold">hard</span> algorithmic challenges in real-time with an integrated execution engine
+              CodeScore is a coding platform design to test coding skills and problem solving under pressure. Solve <span className="text-emerald-600 font-bold">low</span>, <span className="text-amber-500 font-bold">medium</span>, and <span className="text-rose-600 font-bold">hard</span> algorithmic challenges in real-time with an integrated execution engine
             </p>
 
             {/* Rules & Guidelines */}
@@ -97,6 +97,10 @@ export default function Login() {
                   <span className="text-slate-100 font-bold">•</span>
                   <span><strong>Hidden Scoring:</strong> All code is evaluated against secret test cases, and scores are tracked privately on the admin</span>
                 </li>
+                <li className="flex items-start gap-2 text-rose-600">
+                  <span className="text-slate-100 font-bold">•</span>
+                  <span><em>Note:</em> If you close or minimize this window, you are automatically disqualified from the competition.</span>
+                </li>
               </ul>
             </div>
 
@@ -110,9 +114,9 @@ export default function Login() {
         </div>
 
         {/* Floating Login Box Positioned at Bottom Right (Matching Image 2) */}
-        <div className="absolute bottom-6 right-6 xl:bottom-8 xl:right-14 z-30 w-[280px] xl:w-[300px] bg-[#071328]/95 backdrop-blur-md border border-blue-500/40 p-5 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] transition-all">
+        <div className="absolute bottom-6 right-[234px] xl:bottom-8 xl:right-[266px] z-30 w-[300px] xl:w-[320px] bg-[#071328]/95 backdrop-blur-md border border-blue-500/40 p-3 rounded-xl shadow-[0_16px_48px_rgba(0,0,0,0.6)] transition-all">
 
-          <div className="flex flex-col items-center mb-4">
+          <div className="flex flex-col items-center mb-2">
             <div className="bg-blue-600 p-2.5 rounded-full mb-2 shadow-md shadow-blue-600/40">
               <Users className="text-white" size={18} />
             </div>
@@ -123,12 +127,12 @@ export default function Login() {
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-3 py-1.5 rounded-lg mb-3 text-xs flex items-center justify-center font-medium">
+            <div className="bg-red-500/20 border border-red-500/50 text-red-200 px-3 py-1.5 rounded-lg mb-2 text-xs flex items-center justify-center font-medium">
               <span>{error}</span>
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-3">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                 <Users size={15} />
@@ -159,7 +163,7 @@ export default function Login() {
 
             <button
               type="submit"
-              className="w-full mt-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-2.5 px-4 rounded-lg shadow-md shadow-blue-600/30 transform transition-all duration-200 active:scale-[0.98] focus:outline-none text-xs tracking-wider uppercase"
+              className="w-full mt-1 bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-2 px-4 rounded-lg shadow-md shadow-blue-600/30 transform transition-all duration-200 active:scale-[0.98] focus:outline-none text-xs tracking-wider uppercase"
             >
               LOGIN
             </button>
