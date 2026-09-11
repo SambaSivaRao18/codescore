@@ -16,7 +16,7 @@ export default function Admin() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (password === 'admin123') {
+    if (password === 'Shiv@123') {
       localStorage.setItem('adminAuth', 'true');
       setIsAuthenticated(true);
       setError('');

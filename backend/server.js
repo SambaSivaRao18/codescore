@@ -103,10 +103,10 @@ function getTimerDetails(firstLoginAt) {
 // Disqualification Background Worker (Runs every 5 seconds)
 // ─────────────────────────────────────────────────────────────────────────────
 setInterval(() => {
-  const fifteenSecondsAgo = new Date(Date.now() - 15000).toISOString();
+  const inactiveThreshold = new Date(Date.now() - 120000).toISOString();
   db.run(
     `UPDATE Team SET isDisqualified = 1 WHERE lastSeen < ? AND isDisqualified = 0`,
-    [fifteenSecondsAgo],
+    [inactiveThreshold],
     function (err) {
       if (err) {
         console.error('Error updating disqualification:', err);

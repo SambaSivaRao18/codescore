@@ -91,6 +91,7 @@ export default function Playground() {
             setShowTimeExpiredModal(true);
           }
         }
+        setShowDisqualifiedModal(false); // Auto-resume if requalified by admin
       } catch (err) {
         if (err.response?.status === 403) {
           setShowDisqualifiedModal(true);
@@ -101,18 +102,18 @@ export default function Playground() {
     // Trigger disqualification API call
     const triggerDisqualification = async () => {
       try {
-        await axios.post(`${API_BASE}/disqualify`, { teamID, reason: 'Window closed or minimized > 10s' });
+        await axios.post(`${API_BASE}/disqualify`, { teamID, reason: 'Window closed or minimized > 15s' });
       } catch (err) {}
       setShowDisqualifiedModal(true);
     };
 
-    // 3-second window minimize / tab hidden detection
+    // 15-second window minimize / tab hidden detection
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         if (!blurTimerRef.current) {
           blurTimerRef.current = setTimeout(() => {
             triggerDisqualification();
-          }, 3000);
+          }, 15000);
         }
       } else if (document.visibilityState === 'visible') {
         if (blurTimerRef.current) {
@@ -122,30 +123,11 @@ export default function Playground() {
       }
     };
 
-    const handleWindowBlur = () => {
-      if (!blurTimerRef.current) {
-        blurTimerRef.current = setTimeout(() => {
-          triggerDisqualification();
-        }, 3000);
-      }
-    };
-
-    const handleWindowFocus = () => {
-      if (document.visibilityState === 'visible' && blurTimerRef.current) {
-        clearTimeout(blurTimerRef.current);
-        blurTimerRef.current = null;
-      }
-    };
-
     document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('blur', handleWindowBlur);
-    window.addEventListener('focus', handleWindowFocus);
 
     return () => {
       clearInterval(heartbeat);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('blur', handleWindowBlur);
-      window.removeEventListener('focus', handleWindowFocus);
       if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
     };
   }, [teamID]);
