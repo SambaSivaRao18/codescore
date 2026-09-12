@@ -29,24 +29,6 @@ export default function AdminDashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  const toggleStatus = async (team, e) => {
-    e.stopPropagation();
-
-    try {
-      await axios.put(
-        `${API_URL}/api/admin/team/${team.teamID}/status`,
-        {
-          isDisqualified: !team.isDisqualified
-        }
-      );
-
-      fetchLeaderboard();
-    } catch (error) {
-      console.error("Failed to update status", error);
-      alert("Failed to update status");
-    }
-  };
-
   const toggleExpand = (teamID) => {
     setExpandedTeamId(prev => prev === teamID ? null : teamID);
   };
@@ -127,11 +109,6 @@ export default function AdminDashboard() {
                       {/* Team Name */}
                       <div className="col-span-4 sm:col-span-4 flex items-center gap-3">
                         <span className="font-extrabold text-sm text-white">{team.teamName}</span>
-                        {team.isDisqualified && (
-                          <span className="text-[10px] px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 font-bold border border-rose-500/30">
-                            Disqualified
-                          </span>
-                        )}
                       </div>
 
                       {/* Level (Flag emoji removed per instructions) */}
@@ -165,16 +142,6 @@ export default function AdminDashboard() {
                           <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">
                             TEAM SKILLS VALIDATION
                           </h4>
-                          <button
-                            onClick={(e) => toggleStatus(team, e)}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all border ${
-                              team.isDisqualified
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20'
-                                : 'bg-rose-500/10 text-rose-400 border-rose-500/30 hover:bg-rose-500/20'
-                            }`}
-                          >
-                            {team.isDisqualified ? 'Requalify Team' : 'Disqualify Team'}
-                          </button>
                         </div>
 
                         {/* Skill Bars for Python, Java, C */}

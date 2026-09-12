@@ -99,23 +99,6 @@ function getTimerDetails(firstLoginAt) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Disqualification Background Worker (Runs every 5 seconds)
-// ─────────────────────────────────────────────────────────────────────────────
-setInterval(() => {
-  const inactiveThreshold = new Date(Date.now() - 120000).toISOString();
-  db.run(
-    `UPDATE Team SET isDisqualified = 1 WHERE lastSeen < ? AND isDisqualified = 0`,
-    [inactiveThreshold],
-    function (err) {
-      if (err) {
-        console.error('Error updating disqualification:', err);
-      } else if (this.changes > 0) {
-        console.log(`Disqualified ${this.changes} team(s) due to inactivity.`);
-      }
-    }
-  );
-}, 5000);
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Java Executor Keep-Alive (Runs every 10 minutes)
@@ -149,7 +132,6 @@ app.post('/api/login', (req, res) => {
   db.get(`SELECT * FROM Team WHERE teamName = ? AND password = ?`, [teamName, password], async (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error during login' });
     if (!row) return res.status(401).json({ error: 'Invalid team credentials' });
-    if (row.isDisqualified) return res.status(403).json({ error: 'Team is disqualified', isDisqualified: true });
 
     const now = new Date().toISOString();
     const firstLoginTime = row.firstLoginAt || now;
@@ -179,10 +161,9 @@ app.post('/api/heartbeat', (req, res) => {
   const { teamID } = req.body;
   if (!teamID) return res.status(400).json({ error: 'teamID required' });
 
-  db.get(`SELECT isDisqualified, firstLoginAt FROM Team WHERE teamID = ?`, [teamID], (err, row) => {
+  db.get(`SELECT firstLoginAt FROM Team WHERE teamID = ?`, [teamID], (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (!row) return res.status(404).json({ error: 'Team not found' });
-    if (row.isDisqualified) return res.status(403).json({ error: 'Team is disqualified' });
 
     const now = new Date().toISOString();
     const timerInfo = getTimerDetails(row.firstLoginAt || now);
@@ -193,16 +174,7 @@ app.post('/api/heartbeat', (req, res) => {
   });
 });
 
-app.post('/api/disqualify', (req, res) => {
-  const { teamID, reason } = req.body;
-  if (!teamID) return res.status(400).json({ error: 'teamID required' });
 
-  db.run(`UPDATE Team SET isDisqualified = 1 WHERE teamID = ?`, [teamID], function (err) {
-    if (err) return res.status(500).json({ error: 'Database error' });
-    console.log(`Team ${teamID} disqualified. Reason: ${reason || 'Window closed or minimized > 10s'}`);
-    res.json({ success: true, message: 'Team disqualified' });
-  });
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Questions & Progression Endpoints
@@ -281,9 +253,8 @@ app.get('/api/challenge', async (req, res) => {
   try {
     await ensureStudentProgress(teamID);
 
-    db.get(`SELECT isDisqualified FROM Team WHERE teamID = ?`, [teamID], (err, team) => {
+    db.get(`SELECT * FROM Team WHERE teamID = ?`, [teamID], (err, team) => {
       if (err || !team) return res.status(404).json({ error: 'Team not found' });
-      if (team.isDisqualified) return res.status(403).json({ error: 'Team is disqualified' });
 
       let sql = `
         SELECT 
@@ -394,10 +365,9 @@ const handleSubmission = async (req, res) => {
   try {
     await ensureStudentProgress(teamID);
 
-    // Verify team disqualification and question progression authorization
-    db.get(`SELECT isDisqualified FROM Team WHERE teamID = ?`, [teamID], (err, team) => {
+    // Verify team progression authorization
+    db.get(`SELECT * FROM Team WHERE teamID = ?`, [teamID], (err, team) => {
       if (err || !team) return res.status(404).json({ error: 'Team not found' });
-      if (team.isDisqualified) return res.status(403).json({ error: 'Team is disqualified' });
 
       db.get(
         `SELECT sp.status, c.challengeID, c.marks, c.questionNumber, c.testCases 
@@ -608,7 +578,7 @@ app.get('/api/admin/leaderboard', (req, res) => {
   db.all(`SELECT COUNT(*) as totalCount FROM Challenges`, [], (err, challengeCountRow) => {
     const totalQuestions = challengeCountRow?.[0]?.totalCount || 10;
 
-    db.all(`SELECT teamID, teamName, teamScore, currentLevel, isDisqualified, firstLoginAt, lastSeen FROM Team`, (err, teams) => {
+    db.all(`SELECT teamID, teamName, teamScore, currentLevel, firstLoginAt, lastSeen FROM Team`, (err, teams) => {
       if (err) return res.status(500).json({ error: err.message });
 
       db.all(`SELECT studentId, questionId, status, solvedAt, solvedLanguage FROM student_progress WHERE status = 'solved'`, (err2, progressRows) => {
@@ -620,7 +590,6 @@ app.get('/api/admin/leaderboard', (req, res) => {
             teamName: t.teamName,
             teamScore: t.teamScore || 0,
             currentLevel: t.currentLevel || 'Gold 2',
-            isDisqualified: Boolean(t.isDisqualified),
             firstLoginAt: t.firstLoginAt,
             lastSeen: t.lastSeen,
             pythonSolved: 0,
@@ -682,7 +651,6 @@ app.get('/api/admin/leaderboard', (req, res) => {
             teamName: t.teamName,
             teamScore: t.teamScore,
             currentLevel: displayLevel,
-            isDisqualified: t.isDisqualified,
             avgTime: avgTimeMinutes,
             totalSolved: t.totalSolved,
             totalQuestions: totalQuestions,
@@ -718,11 +686,10 @@ app.get('/api/admin/leaderboard', (req, res) => {
 
 app.put('/api/admin/team/:id/status', (req, res) => {
   const { id } = req.params;
-  const { isDisqualified } = req.body;
   const now = new Date().toISOString();
   db.run(
-    `UPDATE Team SET isDisqualified = ?, lastSeen = ? WHERE teamID = ?`,
-    [isDisqualified ? 1 : 0, now, id],
+    `UPDATE Team SET lastSeen = ? WHERE teamID = ?`,
+    [now, id],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true });
@@ -736,6 +703,24 @@ app.post('/api/admin/team', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json({ success: true, teamID: this.lastID });
   });
+});
+
+app.put('/api/admin/team/:id', (req, res) => {
+  const { id } = req.params;
+  const { teamName, password } = req.body;
+  if (!teamName) return res.status(400).json({ error: 'Team name is required' });
+
+  if (password) {
+    db.run(`UPDATE Team SET teamName = ?, password = ? WHERE teamID = ?`, [teamName, password, id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  } else {
+    db.run(`UPDATE Team SET teamName = ? WHERE teamID = ?`, [teamName, id], function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true });
+    });
+  }
 });
 
 app.delete('/api/admin/team/:id', (req, res) => {

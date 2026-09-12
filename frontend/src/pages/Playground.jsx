@@ -32,11 +32,8 @@ export default function Playground() {
   // Timer & Disqualification states
   const [timerSecondsRemaining, setTimerSecondsRemaining] = useState(3600);
   const [showTimeExpiredModal, setShowTimeExpiredModal] = useState(false);
-  const blurTimerRef = useRef(null);
-
   // Success and completion modal states
   const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showDisqualifiedModal, setShowDisqualifiedModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const editorRef = useRef(null);
   const levelTabsRef = useRef(null);
@@ -67,7 +64,7 @@ export default function Playground() {
     return () => clearInterval(timerInterval);
   }, []);
 
-  // Heartbeat & Anti-Cheat 10-Second Blur/Minimize Disqualification Effect
+  // Heartbeat
   useEffect(() => {
     if (!teamID) {
       navigate('/');
@@ -91,44 +88,29 @@ export default function Playground() {
             setShowTimeExpiredModal(true);
           }
         }
-        setShowDisqualifiedModal(false); // Auto-resume if requalified by admin
       } catch (err) {
-        if (err.response?.status === 403) {
-          setShowDisqualifiedModal(true);
-        }
+        console.error('Heartbeat failed', err);
       }
     }, 5000);
 
-    // Trigger disqualification API call
-    const triggerDisqualification = async () => {
-      try {
-        await axios.post(`${API_BASE}/disqualify`, { teamID, reason: 'Window closed or minimized > 15s' });
-      } catch (err) {}
-      setShowDisqualifiedModal(true);
+    // Anti-cheat: prevent copy and paste
+    const handleCopyPaste = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      alert('Copying and pasting are disabled during the competition.');
     };
 
-    // 15-second window minimize / tab hidden detection
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (!blurTimerRef.current) {
-          blurTimerRef.current = setTimeout(() => {
-            triggerDisqualification();
-          }, 15000);
-        }
-      } else if (document.visibilityState === 'visible') {
-        if (blurTimerRef.current) {
-          clearTimeout(blurTimerRef.current);
-          blurTimerRef.current = null;
-        }
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('copy', handleCopyPaste, true);
+    document.addEventListener('paste', handleCopyPaste, true);
+    document.addEventListener('cut', handleCopyPaste, true);
+    document.addEventListener('contextmenu', handleCopyPaste, true);
 
     return () => {
       clearInterval(heartbeat);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (blurTimerRef.current) clearTimeout(blurTimerRef.current);
+      document.removeEventListener('copy', handleCopyPaste, true);
+      document.removeEventListener('paste', handleCopyPaste, true);
+      document.removeEventListener('cut', handleCopyPaste, true);
+      document.removeEventListener('contextmenu', handleCopyPaste, true);
     };
   }, [teamID]);
 
@@ -150,10 +132,7 @@ export default function Playground() {
         await loadChallenge(targetQId);
       }
     } catch (err) {
-      if (err.response?.status === 403) {
-        alert('You have been disqualified.');
-        handleLogout();
-      }
+      console.error('Failed to fetch questions:', err);
     }
   };
 
@@ -820,32 +799,7 @@ export default function Playground() {
 
       </div>
 
-      {/* Disqualified Center Modal */}
-      {showDisqualifiedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-rose-500/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center flex flex-col items-center gap-4">
-            <div className="w-14 h-14 bg-rose-500/20 rounded-full flex items-center justify-center border border-rose-500/40 text-rose-400 shadow-lg shadow-rose-950/50">
-              <AlertTriangle size={32} />
-            </div>
 
-            <div>
-              <h3 className="text-lg font-black text-white uppercase tracking-wide">
-                Account Disqualified
-              </h3>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed font-medium">
-                Your team has been disqualified from the competition due to close the window.
-              </p>
-            </div>
-
-            <button
-              onClick={handleLogout}
-              className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-rose-900/30 transition-all active:scale-[0.98]"
-            >
-              Exit to Login
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* All Questions Completed Modal */}
       {showCompletionModal && (

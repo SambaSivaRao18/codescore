@@ -11,6 +11,7 @@ export default function DatabaseManagement() {
   const [teams, setTeams] = useState([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamPassword, setNewTeamPassword] = useState('');
+  const [editingTeam, setEditingTeam] = useState(null);
   
   // Challenges State
   const [challenges, setChallenges] = useState([]);
@@ -51,23 +52,44 @@ export default function DatabaseManagement() {
   };
 
   // --- Teams Actions ---
-  const handleAddTeam = async (e) => {
+  const resetTeamForm = () => {
+    setEditingTeam(null);
+    setNewTeamName('');
+    setNewTeamPassword('');
+  };
+
+  const handleEditTeamClick = (team) => {
+    setEditingTeam(team.teamID);
+    setNewTeamName(team.teamName);
+    setNewTeamPassword(''); // Leave blank unless they want to change it
+  };
+
+  const handleSaveTeam = async (e) => {
     e.preventDefault();
 
     try {
-      await axios.post(
-        `${API_URL}/api/admin/team`,
-        {
-          teamName: newTeamName,
-          password: newTeamPassword
-        }
-      );
+      if (editingTeam) {
+        await axios.put(
+          `${API_URL}/api/admin/team/${editingTeam}`,
+          {
+            teamName: newTeamName,
+            password: newTeamPassword
+          }
+        );
+      } else {
+        await axios.post(
+          `${API_URL}/api/admin/team`,
+          {
+            teamName: newTeamName,
+            password: newTeamPassword
+          }
+        );
+      }
 
-      setNewTeamName('');
-      setNewTeamPassword('');
+      resetTeamForm();
       fetchTeams();
     } catch (e) {
-      alert("Failed to add team");
+      alert("Failed to save team");
     }
   };
 
@@ -200,8 +222,17 @@ export default function DatabaseManagement() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-1">
               <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><Plus size={20} /> Add New Team</h2>
-                <form onSubmit={handleAddTeam} className="space-y-4">
+                <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Plus size={20} /> {editingTeam ? 'Edit Team' : 'Add New Team'}
+                  </div>
+                  {editingTeam && (
+                    <button type="button" onClick={resetTeamForm} className="text-slate-400 hover:text-white p-1">
+                      <X size={20} />
+                    </button>
+                  )}
+                </h2>
+                <form onSubmit={handleSaveTeam} className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">Team Name</label>
                     <input 
@@ -213,17 +244,17 @@ export default function DatabaseManagement() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Password</label>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">Password {editingTeam && <span className="text-xs text-slate-500">(Leave blank to keep current)</span>}</label>
                     <input 
                       type="password" 
                       value={newTeamPassword} 
                       onChange={(e) => setNewTeamPassword(e.target.value)} 
-                      required 
+                      required={!editingTeam} 
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:border-indigo-500 outline-none"
                     />
                   </div>
                   <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 py-2 rounded-lg font-medium transition-colors">
-                    Create Team
+                    {editingTeam ? 'Update Team' : 'Create Team'}
                   </button>
                 </form>
               </div>
@@ -245,6 +276,9 @@ export default function DatabaseManagement() {
                         <td className="px-6 py-4 text-slate-400">{t.teamID}</td>
                         <td className="px-6 py-4 font-medium">{t.teamName}</td>
                         <td className="px-6 py-4 text-right">
+                          <button onClick={() => handleEditTeamClick(t)} className="text-indigo-400 hover:bg-indigo-500/10 p-2 rounded-lg transition-colors mr-2">
+                            <Edit2 size={18} />
+                          </button>
                           <button onClick={() => handleDeleteTeam(t.teamID)} className="text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition-colors">
                             <Trash2 size={18} />
                           </button>

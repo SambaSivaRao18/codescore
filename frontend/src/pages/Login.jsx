@@ -8,7 +8,6 @@ export default function Login() {
   const [teamName, setTeamName] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [showDisqualifiedModal, setShowDisqualifiedModal] = useState(false);
   const navigate = useNavigate();
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -28,11 +27,7 @@ export default function Login() {
 
       navigate('/playground');
     } catch (err) {
-      if (err.response?.data?.isDisqualified || err.response?.status === 403) {
-        setShowDisqualifiedModal(true);
-      } else {
-        setError(err.response?.data?.error || 'Login failed');
-      }
+      setError(err.response?.data?.error || 'Login failed');
     }
   };
 
@@ -97,10 +92,7 @@ export default function Login() {
                   <span className="text-slate-100 font-bold">•</span>
                   <span><strong>Hidden Scoring:</strong> All code is evaluated against secret test cases, and scores are tracked privately on the admin</span>
                 </li>
-                <li className="flex items-start gap-2 text-rose-600">
-                  <span className="text-slate-100 font-bold">•</span>
-                  <span><em>Note:</em> If you close or minimize this window, you are automatically disqualified from the competition.</span>
-                </li>
+
               </ul>
             </div>
 
@@ -179,39 +171,7 @@ export default function Login() {
 
       </div>
 
-      {/* Center Alert Modal for Team Disqualification */}
-      {showDisqualifiedModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-rose-500/50 p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center flex flex-col items-center gap-4 relative">
-            <button
-              onClick={() => setShowDisqualifiedModal(false)}
-              className="absolute top-3 right-3 text-slate-400 hover:text-white p-1 rounded-lg"
-            >
-              <X size={18} />
-            </button>
 
-            <div className="w-14 h-14 bg-rose-500/20 rounded-full flex items-center justify-center border border-rose-500/40 text-rose-400 shadow-lg shadow-rose-950/50">
-              <ShieldAlert size={32} />
-            </div>
-
-            <div>
-              <h3 className="text-lg font-black text-white uppercase tracking-wide">
-                Account Disqualified
-              </h3>
-              <p className="text-xs text-slate-300 mt-2 leading-relaxed font-medium">
-                Your team has been disqualified from the competition due to inactivity or admin action. Please contact your administrator.
-              </p>
-            </div>
-
-            <button
-              onClick={() => setShowDisqualifiedModal(false)}
-              className="w-full py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider shadow-md shadow-rose-900/30 transition-all active:scale-[0.98]"
-            >
-              Understood
-            </button>
-          </div>
-        </div>
-      )}
 
     </div>
   );

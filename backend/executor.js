@@ -188,10 +188,15 @@ async function executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TIM
       const filePath = path.join(tempDir, 'student.py');
       await fs.writeFile(filePath, code, 'utf8');
 
-      // Try python3 first, fallback to python if python3 fails with ENOENT
-      let result = await runProcess('python3', ['student.py'], { cwd: tempDir, stdin, env: cleanEnv, timeout: timeoutMs });
+      // Make file read-only
+      try { await fs.chmod(filePath, 0o444); } catch (e) {}
+      // Lock down directory to read/execute only (effective on Linux)
+      try { await fs.chmod(tempDir, 0o555); } catch (e) {}
+
+      // Use -I (Isolated mode) and -B (Don't write .pyc) for basic Python hardening
+      let result = await runProcess('python3', ['-I', '-B', 'student.py'], { cwd: tempDir, stdin, env: cleanEnv, timeout: timeoutMs });
       if (result.error && result.error.code === 'ENOENT') {
-        result = await runProcess('python', ['student.py'], { cwd: tempDir, stdin, env: cleanEnv, timeout: timeoutMs });
+        result = await runProcess('python', ['-I', '-B', 'student.py'], { cwd: tempDir, stdin, env: cleanEnv, timeout: timeoutMs });
       }
 
       if (result.error) {
@@ -231,6 +236,9 @@ async function executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TIM
         return { compileError: compileRes.stderr || compileRes.stdout || 'Compilation failed' };
       }
 
+      // Lock down directory to read/execute only (effective on Linux) after compilation
+      try { await fs.chmod(tempDir, 0o555); } catch (e) {}
+
       // Execute binary
       const execRes = await runProcess(binaryPath, [], { cwd: tempDir, stdin, env: cleanEnv, timeout: timeoutMs });
 
@@ -252,15 +260,54 @@ async function executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TIM
     }
 
     if (language === 'java') {
-      // Java is handled by the remote Docker microservice (java-executor)
-      // This keeps the Node.js backend on Render's Node runtime (no Docker needed here)
-      // so the SQLite database persists normally between restarts.
-      const result = await callJavaExecutor(code, stdin, timeoutMs);
-      return result;
+      if (process.env.JAVA_EXECUTOR_URL) {
+        return await callJavaExecutor(code, stdin, timeoutMs);
+      } else {
+        const srcPath = path.join(tempDir, 'Main.java');
+        await fs.writeFile(srcPath, code, 'utf8');
+
+        // Compile with javac
+        const compileRes = await runProcess('javac', ['Main.java'], { cwd: tempDir, env: cleanEnv, timeout: 10000 });
+        if (compileRes.error) {
+          if (compileRes.error.code === 'ENOENT') {
+            return { error: 'Java compiler (javac) is not installed on the server.' };
+          }
+          return { compileError: `Compilation error: ${compileRes.error.message}` };
+        }
+        if (compileRes.code !== 0) {
+          return { compileError: compileRes.stderr || compileRes.stdout || 'Compilation failed' };
+        }
+
+        // Lock down directory to read/execute only (effective on Linux) after compilation
+        try { await fs.chmod(tempDir, 0o555); } catch (e) {}
+
+        // Execute class
+        const execRes = await runProcess('java', ['Main'], { cwd: tempDir, stdin, env: cleanEnv, timeout: timeoutMs });
+
+        if (execRes.error) {
+          return { error: `Runtime execution error: ${execRes.error.message}` };
+        }
+        if (execRes.isTimeout) {
+          return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
+        }
+        if (execRes.isExceededBuffer) {
+          return { error: `Output Limit Exceeded (max ${MAX_BUFFER_BYTES / 1024} KB)` };
+        }
+
+        return {
+          stdout: execRes.stdout,
+          stderr: execRes.stderr,
+          exitCode: execRes.code,
+        };
+      }
     }
   } finally {
     // Guaranteed cleanup of isolated directory
     if (tempDir) {
+      try {
+        // Restore write permissions so the directory can be successfully deleted
+        await fs.chmod(tempDir, 0o777);
+      } catch (e) {}
       await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
     }
   }
