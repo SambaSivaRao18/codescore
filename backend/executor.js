@@ -135,7 +135,7 @@ function callJavaExecutor(code, stdin, timeoutMs) {
         try {
           resolve(JSON.parse(data));
         } catch (e) {
-          resolve({ error: 'Invalid response from Java executor service' });
+          resolve({ error: `Invalid response from Java executor service (Status ${res.statusCode}): ${data.substring(0, 200)}` });
         }
       });
     });
