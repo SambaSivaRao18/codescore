@@ -260,11 +260,14 @@ async function executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TIM
     }
 
     if (language === 'java') {
+      // Ensure the public class is named Main to match Main.java
+      const normalizedCode = code.replace(/public\s+class\s+[a-zA-Z_]\w*/, 'public class Main');
+
       if (process.env.JAVA_EXECUTOR_URL) {
-        return await callJavaExecutor(code, stdin, timeoutMs);
+        return await callJavaExecutor(normalizedCode, stdin, timeoutMs);
       } else {
         const srcPath = path.join(tempDir, 'Main.java');
-        await fs.writeFile(srcPath, code, 'utf8');
+        await fs.writeFile(srcPath, normalizedCode, 'utf8');
 
         // Compile with javac
         const compileRes = await runProcess('javac', ['Main.java'], { cwd: tempDir, env: cleanEnv, timeout: 10000 });
