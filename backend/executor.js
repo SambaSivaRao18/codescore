@@ -6,12 +6,12 @@ const https = require('https');
 const http = require('http');
 
 const SUPPORTED_LANGUAGES = ['python', 'java', 'c'];
-const DEFAULT_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '30000', 10);
-const MAX_CONCURRENT_EXECUTIONS = parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '5', 10);
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '45000', 10);
+const MAX_CONCURRENT_EXECUTIONS = parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '20', 10);
 const MAX_QUEUE_SIZE = parseInt(process.env.MAX_QUEUE_SIZE || '500', 10);
 
-const MAX_BUFFER_BYTES = 256 * 1024; // 256 KB
-const MAX_CODE_SIZE_BYTES = 64 * 1024; // 64 KB
+const MAX_BUFFER_BYTES = 50 * 1024; // 50 KB
+const MAX_CODE_SIZE_BYTES = 100 * 1024; // 100 KB
 
 // --- Execution Queue State ---
 let currentRunning = 0;
@@ -221,7 +221,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
   }
 
   if (Buffer.byteLength(code, 'utf8') > MAX_CODE_SIZE_BYTES) {
-    return { error: `Source code exceeds maximum allowed size (${MAX_CODE_SIZE_BYTES / 1024} KB)` };
+    return { error: `you wrote to mush code then we expect` };
   }
 
   // Create isolated temp directory
@@ -267,7 +267,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
         return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
       }
       if (result.isExceededBuffer) {
-        return { error: `Output Limit Exceeded (max ${MAX_BUFFER_BYTES / 1024} KB)` };
+        return { error: `to mush output then we expected` };
       }
 
       return {
@@ -310,7 +310,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
         return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
       }
       if (execRes.isExceededBuffer) {
-        return { error: `Output Limit Exceeded (max ${MAX_BUFFER_BYTES / 1024} KB)` };
+        return { error: `to mush output then we expected` };
       }
 
       return {
@@ -355,7 +355,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
           return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
         }
         if (execRes.isExceededBuffer) {
-          return { error: `Output Limit Exceeded (max ${MAX_BUFFER_BYTES / 1024} KB)` };
+          return { error: `to mush output then we expected` };
         }
 
         return {

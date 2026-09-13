@@ -84,8 +84,17 @@ function ensureStudentProgress(teamID) {
   });
 }
 
-function getTimerDetails(firstLoginAt) {
+function getTimerDetails(firstLoginAt, teamName = null) {
   const TOTAL_DURATION_SECONDS = 3600; // 1 hour total competition duration
+
+  if (teamName === 'codescore') {
+    return {
+      firstLoginAt: firstLoginAt || new Date().toISOString(),
+      timerSecondsRemaining: 99999,
+      isExpired: false,
+    };
+  }
+
   if (!firstLoginAt) {
     return { firstLoginAt: null, timerSecondsRemaining: TOTAL_DURATION_SECONDS, isExpired: false };
   }
@@ -143,7 +152,7 @@ app.post('/api/login', (req, res) => {
       console.error('Failed to initialize student progress:', e);
     }
 
-    const timerInfo = getTimerDetails(firstLoginTime);
+    const timerInfo = getTimerDetails(firstLoginTime, row.teamName);
 
     res.json({
       message: 'Login successful',
@@ -161,12 +170,12 @@ app.post('/api/heartbeat', (req, res) => {
   const { teamID } = req.body;
   if (!teamID) return res.status(400).json({ error: 'teamID required' });
 
-  db.get(`SELECT firstLoginAt FROM Team WHERE teamID = ?`, [teamID], (err, row) => {
+  db.get(`SELECT firstLoginAt, teamName FROM Team WHERE teamID = ?`, [teamID], (err, row) => {
     if (err) return res.status(500).json({ error: 'Database error' });
     if (!row) return res.status(404).json({ error: 'Team not found' });
 
     const now = new Date().toISOString();
-    const timerInfo = getTimerDetails(row.firstLoginAt || now);
+    const timerInfo = getTimerDetails(row.firstLoginAt || now, row.teamName);
     db.run(`UPDATE Team SET lastSeen = ? WHERE teamID = ?`, [now, teamID], (updateErr) => {
       if (updateErr) return res.status(500).json({ error: 'Database error' });
       res.json({ success: true, timerSecondsRemaining: timerInfo.timerSecondsRemaining, isExpired: timerInfo.isExpired });
@@ -186,6 +195,13 @@ app.get('/api/questions', async (req, res) => {
   if (!teamID) return res.status(400).json({ error: 'teamID required' });
 
   try {
+    const team = await new Promise((resolve, reject) => {
+      db.get(`SELECT teamName FROM Team WHERE teamID = ?`, [teamID], (err, row) => {
+        if (err) reject(err);
+        else resolve(row);
+      });
+    });
+
     await ensureStudentProgress(teamID);
 
     const query = `
@@ -211,7 +227,11 @@ app.get('/api/questions', async (req, res) => {
         let testCases = [];
         try {
           testCases = JSON.parse(q.testCases);
-        } catch (e) {}
+        } catch (e) { }
+
+        const isPscmr = team && team.teamName === 'codescore';
+        const finalStatus = isPscmr ? (q.status === 'solved' ? 'solved' : 'open') : q.status;
+        const isLocked = finalStatus === 'locked';
 
         // Filter hidden test cases from standard list returned to client
         const publicTestCases = testCases
@@ -228,12 +248,12 @@ app.get('/api/questions', async (req, res) => {
           // displayNumber is always 1, 2, 3... based on sorted order regardless of DB questionNumber
           questionNumber: arrayIdx + 1,
           title: q.title,
-          description: q.status === 'locked' ? 'Locked question. Complete previous questions first.' : q.description,
+          description: isLocked ? 'Locked question. Complete previous questions first.' : q.description,
           level: q.level,
           marks: q.marks,
-          status: q.status,
+          status: finalStatus,
           allTestsPassed: Boolean(q.allTestsPassed),
-          publicTestCases: q.status === 'locked' ? [] : publicTestCases,
+          publicTestCases: isLocked ? [] : publicTestCases,
           totalTestCases: testCases.length,
         };
       });
@@ -283,8 +303,14 @@ app.get('/api/challenge', async (req, res) => {
         if (err) return res.status(500).json({ error: 'Database error' });
         if (!challenge) return res.status(404).json({ error: 'No question available' });
 
-        if (challenge.status === 'locked') {
+        const isCodescore = team && team.teamName === 'codescore';
+
+        if (challenge.status === 'locked' && !isCodescore) {
           return res.status(403).json({ error: 'This question is locked. Solve preceding questions first.' });
+        }
+
+        if (isCodescore) {
+          challenge.status = challenge.status === 'solved' ? 'solved' : 'open';
         }
 
         db.get(`SELECT COUNT(*) as totalQuestions FROM Challenges`, (err, totalRow) => {
@@ -297,7 +323,7 @@ app.get('/api/challenge', async (req, res) => {
             let testCases = [];
             try {
               testCases = JSON.parse(challenge.testCases);
-            } catch (e) {}
+            } catch (e) { }
 
             const publicTestCases = testCases
               .filter(tc => !tc.isHidden)
@@ -586,7 +612,7 @@ app.get('/api/admin/leaderboard', (req, res) => {
   db.all(`SELECT COUNT(*) as totalCount FROM Challenges`, [], (err, challengeCountRow) => {
     const totalQuestions = challengeCountRow?.[0]?.totalCount || 10;
 
-    db.all(`SELECT teamID, teamName, teamScore, currentLevel, firstLoginAt, lastSeen FROM Team`, (err, teams) => {
+    db.all(`SELECT teamID, teamName, password, teamScore, currentLevel, firstLoginAt, lastSeen FROM Team`, (err, teams) => {
       if (err) return res.status(500).json({ error: err.message });
 
       db.all(`SELECT studentId, questionId, status, solvedAt, solvedLanguage FROM student_progress WHERE status = 'solved'`, (err2, progressRows) => {
@@ -596,7 +622,8 @@ app.get('/api/admin/leaderboard', (req, res) => {
           teamMap[t.teamID] = {
             teamID: t.teamID,
             teamName: t.teamName,
-            teamScore: t.teamScore || 0,
+            password: t.password,
+            teamScore: t.teamName === 'codescore' ? 0 : (t.teamScore || 0),
             currentLevel: t.currentLevel || 'Gold 2',
             firstLoginAt: t.firstLoginAt,
             lastSeen: t.lastSeen,
@@ -657,6 +684,7 @@ app.get('/api/admin/leaderboard', (req, res) => {
           return {
             teamID: t.teamID,
             teamName: t.teamName,
+            password: t.password,
             teamScore: t.teamScore,
             currentLevel: displayLevel,
             avgTime: avgTimeMinutes,
@@ -681,12 +709,13 @@ app.get('/api/admin/leaderboard', (req, res) => {
           return a.avgTime - b.avgTime;
         });
 
-        // Assign rank dynamically based on sorted order
-        leaderboardData.forEach((team, idx) => {
-          team.rank = idx + 1;
+        let currentRank = 1;
+        const filteredLeaderboard = leaderboardData.filter(team => team.teamName !== 'codescore');
+        filteredLeaderboard.forEach((team) => {
+          team.rank = currentRank++;
         });
 
-        res.json(leaderboardData);
+        res.json(filteredLeaderboard);
       });
     });
   });
@@ -719,12 +748,12 @@ app.put('/api/admin/team/:id', (req, res) => {
   if (!teamName) return res.status(400).json({ error: 'Team name is required' });
 
   if (password) {
-    db.run(`UPDATE Team SET teamName = ?, password = ? WHERE teamID = ?`, [teamName, password, id], function(err) {
+    db.run(`UPDATE Team SET teamName = ?, password = ? WHERE teamID = ?`, [teamName, password, id], function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true });
     });
   } else {
-    db.run(`UPDATE Team SET teamName = ? WHERE teamID = ?`, [teamName, id], function(err) {
+    db.run(`UPDATE Team SET teamName = ? WHERE teamID = ?`, [teamName, id], function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true });
     });
@@ -775,8 +804,8 @@ app.put('/api/admin/challenge/:id', (req, res) => {
   const { id } = req.params;
   const { level, title, description, marks, testCases, questionNumber } = req.body;
   db.run(
-    `UPDATE Challenges SET level = ?, title = ?, description = ?, marks = ?, testCases = ?, questionNumber = ? WHERE challengeID = ?`,
-    [level, title, description, marks, testCases, questionNumber, id],
+    `UPDATE Challenges SET level = ?, title = ?, description = ?, marks = ?, testCases = ?, questionNumber = COALESCE(?, questionNumber) WHERE challengeID = ?`,
+    [level, title, description, marks, testCases, questionNumber !== undefined ? questionNumber : null, id],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       res.json({ success: true });
