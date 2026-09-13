@@ -402,6 +402,10 @@ const handleSubmission = async (req, res) => {
               stdin: tc.input || '',
             });
 
+            if (execResult.isQueueFull) {
+              return res.status(429).json({ error: 'Server is currently overloaded. Please try again later.' });
+            }
+
             if (execResult.error || execResult.compileError || execResult.exitCode !== 0) {
               allTestsPassed = false;
 
@@ -534,6 +538,10 @@ app.post('/api/run-testcase', async (req, res) => {
         code,
         stdin: tc.input || '',
       });
+
+      if (result.isQueueFull) {
+        return res.status(429).json({ error: 'Server is currently overloaded. Please try again later.' });
+      }
 
       if (result.compileError) {
         return res.json({
@@ -727,6 +735,14 @@ app.delete('/api/admin/team/:id', (req, res) => {
   const { id } = req.params;
   db.run(`DELETE FROM Team WHERE teamID = ?`, [id], function (err) {
     if (err) return res.status(500).json({ error: err.message });
+
+    // Reset auto-increment if table is empty
+    db.get(`SELECT COUNT(*) as count FROM Team`, (countErr, row) => {
+      if (!countErr && row && row.count === 0) {
+        db.run(`DELETE FROM sqlite_sequence WHERE name='Team'`);
+      }
+    });
+
     res.json({ success: true });
   });
 });

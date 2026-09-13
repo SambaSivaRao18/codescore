@@ -6,9 +6,70 @@ const https = require('https');
 const http = require('http');
 
 const SUPPORTED_LANGUAGES = ['python', 'java', 'c'];
-const DEFAULT_TIMEOUT_MS = 2000; // 2 seconds
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '30000', 10);
+const MAX_CONCURRENT_EXECUTIONS = parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '5', 10);
+const MAX_QUEUE_SIZE = parseInt(process.env.MAX_QUEUE_SIZE || '500', 10);
+
 const MAX_BUFFER_BYTES = 256 * 1024; // 256 KB
 const MAX_CODE_SIZE_BYTES = 64 * 1024; // 64 KB
+
+// --- Execution Queue State ---
+let currentRunning = 0;
+const executionQueue = [];
+
+/**
+ * Process the next job in the queue
+ */
+async function processQueue() {
+  if (currentRunning >= MAX_CONCURRENT_EXECUTIONS || executionQueue.length === 0) {
+    return;
+  }
+
+  currentRunning++;
+  const task = executionQueue.shift();
+  const queuePos = executionQueue.length;
+  
+  const startTime = Date.now();
+  console.log(`[EXECUTION QUEUE] started | Language: ${task.params.language} | Running: ${currentRunning}/${MAX_CONCURRENT_EXECUTIONS} | Queue: ${queuePos}`);
+  
+  try {
+    const result = await _executeCode(task.params);
+    const duration = Date.now() - startTime;
+    
+    if (result.error && result.error.includes('Time Limit Exceeded')) {
+      console.log(`[EXECUTION QUEUE] timeout | Language: ${task.params.language} | Duration: ${duration}ms`);
+    } else if (result.error || result.compileError) {
+      console.log(`[EXECUTION QUEUE] failed  | Language: ${task.params.language} | Duration: ${duration}ms`);
+    } else {
+      console.log(`[EXECUTION QUEUE] completed | Language: ${task.params.language} | Duration: ${duration}ms`);
+    }
+    
+    task.resolve(result);
+  } catch (err) {
+    const duration = Date.now() - startTime;
+    console.log(`[EXECUTION QUEUE] exception | Language: ${task.params.language} | Duration: ${duration}ms | Error: ${err.message}`);
+    task.resolve({ error: `Internal queue execution error: ${err.message}` });
+  } finally {
+    currentRunning--;
+    processQueue(); // Trigger next task
+  }
+}
+
+/**
+ * Enqueue an execution request
+ */
+function executeCode(params) {
+  if (executionQueue.length >= MAX_QUEUE_SIZE) {
+    console.log(`[EXECUTION QUEUE] rejected (QUEUE FULL) | Language: ${params.language} | Queue: ${executionQueue.length}`);
+    return Promise.resolve({ error: 'Server is currently overloaded. Please try again later.', isQueueFull: true });
+  }
+
+  return new Promise((resolve, reject) => {
+    executionQueue.push({ resolve, reject, params });
+    console.log(`[EXECUTION QUEUE] queued | Language: ${params.language} | Position: ${executionQueue.length} | Running: ${currentRunning}`);
+    processQueue();
+  });
+}
 
 /**
  * Execute command as a child process with timeout, stdin, and buffer limits
@@ -154,7 +215,7 @@ function callJavaExecutor(code, stdin, timeoutMs) {
 /**
  * Execute Python, Java, or C code on the server
  */
-async function executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
+async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TIMEOUT_MS }) {
   if (!SUPPORTED_LANGUAGES.includes(language)) {
     return { error: `Unsupported language: ${language}. Allowed: ${SUPPORTED_LANGUAGES.join(', ')}` };
   }

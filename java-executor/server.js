@@ -17,8 +17,8 @@ const app = express();
 app.use(express.json({ limit: '256kb' }));
 
 const PORT = process.env.PORT || 4000;
-const DEFAULT_TIMEOUT_MS = 10000;   // 10s compile timeout
-const RUN_TIMEOUT_MS = 5000;        // 5s run timeout
+const DEFAULT_TIMEOUT_MS = parseInt(process.env.COMPILE_TIMEOUT_MS || '15000', 10);
+const RUN_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '30000', 10);
 const MAX_BUFFER_BYTES = 256 * 1024;
 const MAX_CODE_SIZE_BYTES = 64 * 1024;
 
