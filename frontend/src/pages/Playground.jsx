@@ -35,6 +35,7 @@ export default function Playground() {
   // Success and completion modal states
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [manualLevel, setManualLevel] = useState(null);
   const editorRef = useRef(null);
   const levelTabsRef = useRef(null);
 
@@ -77,7 +78,7 @@ export default function Playground() {
     // Render free-tier services sleep after inactivity. By pinging /api/runtimes
     // immediately when the page loads, we wake the java-executor early so
     // Java code doesn't have a long cold-start delay when students submit.
-    fetch(`${API_BASE}/runtimes`).catch(() => {});
+    fetch(`${API_BASE}/runtimes`).catch(() => { });
 
     const heartbeat = setInterval(async () => {
       try {
@@ -95,6 +96,9 @@ export default function Playground() {
 
     // Anti-cheat: prevent copy and paste
     const handleCopyPaste = (e) => {
+      const currentTeam = localStorage.getItem('teamName');
+      if (currentTeam === 'codescore') return; // Allow pscmr to copy and paste
+
       e.preventDefault();
       e.stopPropagation();
       alert('Copying and pasting are disabled during the competition.');
@@ -318,17 +322,28 @@ export default function Playground() {
   const allMediumSolved = mediumQuestions.length > 0 && mediumQuestions.every(q => q.status === 'solved');
 
   let activeLevelName = 'low';
-  if (allLowSolved && allMediumSolved) {
-    activeLevelName = 'hard';
-  } else if (allLowSolved) {
-    activeLevelName = 'medium';
+  if (teamName === 'codescore' && manualLevel) {
+    activeLevelName = manualLevel;
+  } else {
+    if (allLowSolved && allMediumSolved) {
+      activeLevelName = 'hard';
+    } else if (allLowSolved) {
+      activeLevelName = 'medium';
+    }
   }
+
+  const handleLevelClick = () => {
+    if (teamName !== 'codescore') return;
+    if (activeLevelName === 'low') setManualLevel('medium');
+    else if (activeLevelName === 'medium') setManualLevel('hard');
+    else setManualLevel('low');
+  };
 
   // Filter top navigation questions to display ONLY current active level questions
   const visibleLevelQuestions = questions.filter(q => (q.level || 'low').toLowerCase() === activeLevelName);
 
   return (
-    <div className="h-screen w-full flex flex-col bg-[#0b1120] text-slate-200 font-['Plus_Jakarta_Sans',sans-serif] select-none overflow-hidden">
+    <div className={`h-screen w-full flex flex-col bg-[#0b1120] text-slate-200 font-['Plus_Jakarta_Sans',sans-serif] overflow-hidden ${teamName === 'codescore' ? '' : 'select-none'}`}>
 
       {/* Top Navigation Bar */}
       <div className="h-14 flex items-center justify-between px-6 border-b border-slate-800/80 bg-[#111827] flex-shrink-0 z-20 shadow-md gap-4 sticky top-0">
@@ -338,11 +353,15 @@ export default function Playground() {
 
         {/* Current Active Level Badge & Level-Filtered Question Tabs */}
         <div className="flex items-center gap-3 overflow-x-auto py-1">
-          <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-700/80 rounded-lg text-xs font-bold uppercase tracking-wider text-amber-400 shrink-0">
+          <div 
+            onClick={handleLevelClick}
+            className={`flex items-center gap-1.5 px-3 py-1 bg-slate-900 border border-slate-700/80 rounded-lg text-xs font-bold uppercase tracking-wider text-amber-400 shrink-0 ${teamName === 'codescore' ? 'cursor-pointer hover:bg-slate-800' : ''}`}
+            title={teamName === 'codescore' ? 'Click to change level' : 'Current Level'}
+          >
             <span className="text-slate-400">Level:</span>
             <span className={
               activeLevelName === 'low' ? 'text-emerald-400 font-extrabold' :
-              activeLevelName === 'medium' ? 'text-amber-400 font-extrabold' : 'text-rose-400 font-extrabold'
+                activeLevelName === 'medium' ? 'text-amber-400 font-extrabold' : 'text-rose-400 font-extrabold'
             }>
               {activeLevelName === 'low' ? 'Low' : activeLevelName === 'medium' ? 'Medium' : 'Hard'}
             </span>
@@ -370,12 +389,12 @@ export default function Playground() {
                   disabled={isLocked}
                   onClick={() => loadChallenge(q.questionId)}
                   className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold transition-all border shrink-0 ${isSelected
-                      ? 'bg-blue-600/25 border-blue-500 text-white shadow-sm'
-                      : isSolved
-                        ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20'
-                        : isLocked
-                          ? 'bg-slate-900/60 border-slate-800 text-slate-600 cursor-not-allowed'
-                          : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
+                    ? 'bg-blue-600/25 border-blue-500 text-white shadow-sm'
+                    : isSolved
+                      ? 'bg-emerald-500/10 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/20'
+                      : isLocked
+                        ? 'bg-slate-900/60 border-slate-800 text-slate-600 cursor-not-allowed'
+                        : 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-700'
                     }`}
                   title={isLocked ? 'Locked - Solve previous questions first' : `Question ${q.questionNumber}: ${q.title}`}
                 >
@@ -406,11 +425,10 @@ export default function Playground() {
 
         {/* Right Corner: Countdown Timer, Team Info & Logout */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono font-extrabold text-xs shadow-inner ${
-            timerSecondsRemaining < 300
+          <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono font-extrabold text-xs shadow-inner ${timerSecondsRemaining < 300
               ? 'bg-rose-500/20 text-rose-400 border-rose-500/50 animate-pulse'
               : 'bg-slate-800/90 text-amber-400 border-amber-500/30'
-          }`}
+            }`}
             title="Remaining competition time"
           >
             <Clock size={15} className={timerSecondsRemaining < 300 ? 'text-rose-400' : 'text-amber-400'} />
@@ -441,7 +459,7 @@ export default function Playground() {
             <span className="text-xs font-bold uppercase tracking-wider text-blue-400 border-b-2 border-blue-500 pb-0.5">Description</span>
             {currentQObj && (
               <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider ${currentQObj.status === 'solved' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                  currentQObj.status === 'unlocked' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-800 text-slate-500'
+                currentQObj.status === 'unlocked' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-800 text-slate-500'
                 }`}>
                 {currentQObj.status === 'solved' ? '✓ Solved' : currentQObj.status === 'unlocked' ? '→ Active' : '🔒 Locked'}
               </span>
@@ -451,11 +469,11 @@ export default function Playground() {
           <div className="flex-1 p-5 overflow-y-auto custom-scrollbar">
             {challenge && challenge.questionId ? (
               <div className="w-full space-y-4">
-                <div>
-                  <h2 className="text-xl font-bold text-white tracking-tight leading-snug">
-                    Question {challenge.questionNumber}: {challenge.title}
-                  </h2>
-                </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white tracking-tight leading-snug">
+                      {challenge.title}
+                    </h2>
+                  </div>
 
                 <div className="flex items-center gap-3">
                   {getDifficultyBadge(challenge.level)}
@@ -477,11 +495,11 @@ export default function Playground() {
                         <div className="font-mono space-y-1.5 text-slate-300">
                           <div className="flex flex-col">
                             <span className="text-slate-500 text-[10px] font-sans uppercase font-medium">Input:</span>
-                            <span className="text-slate-200 bg-slate-950/80 p-1.5 rounded mt-0.5 border border-slate-800/60">{tc.input || '(empty)'}</span>
+                            <span className="text-slate-200 bg-slate-950/80 p-1.5 rounded mt-0.5 border border-slate-800/60 whitespace-pre-wrap">{tc.input || '(empty)'}</span>
                           </div>
                           <div className="flex flex-col">
                             <span className="text-slate-500 text-[10px] font-sans uppercase font-medium">Expected Output:</span>
-                            <span className="text-emerald-400 bg-slate-950/80 p-1.5 rounded mt-0.5 border border-slate-800/60">{tc.expectedOutput}</span>
+                            <span className="text-emerald-400 bg-slate-950/80 p-1.5 rounded mt-0.5 border border-slate-800/60 whitespace-pre-wrap">{tc.expectedOutput}</span>
                           </div>
                         </div>
                       </div>
@@ -615,8 +633,8 @@ export default function Playground() {
               onClick={handleNextQuestion}
               disabled={isMovingNext || !isCurrentSolved}
               className={`flex items-center gap-1.5 px-5 py-2 rounded-lg text-xs font-extrabold shadow-md transition-all tracking-wide uppercase ${isCurrentSolved
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white cursor-pointer active:scale-[0.98] shadow-blue-900/40'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-50'
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white cursor-pointer active:scale-[0.98] shadow-blue-900/40'
+                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-50'
                 }`}
               title={isCurrentSolved ? 'Advance to next question' : 'Solve all test cases to unlock next question'}
             >
@@ -667,12 +685,12 @@ export default function Playground() {
               {/* Status Indicator — green only when ALL tests pass */}
               <div className="flex items-center">
                 <span className={`text-xs px-3 py-1 rounded-full font-medium flex items-center gap-1.5 ${submissionResult?.allTestsPassed === true || statusText === 'Test Case Passed'
-                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                    : submissionResult && !submissionResult.allTestsPassed
+                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                  : submissionResult && !submissionResult.allTestsPassed
+                    ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
+                    : statusText.includes('Error') || statusText === 'Wrong Answer'
                       ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                      : statusText.includes('Error') || statusText === 'Wrong Answer'
-                        ? 'bg-rose-500/15 text-rose-400 border border-rose-500/30'
-                        : 'bg-slate-800 text-slate-400 border border-slate-700'
+                      : 'bg-slate-800 text-slate-400 border border-slate-700'
                   }`}>
                   {submissionResult?.allTestsPassed === true || statusText === 'Test Case Passed' ? <CheckCircle2 size={13} /> :
                     (submissionResult && !submissionResult.allTestsPassed) || statusText.includes('Error') || statusText === 'Wrong Answer' ? <XCircle size={13} /> : null}
@@ -706,8 +724,8 @@ export default function Playground() {
                           <div
                             key={res.testCase}
                             className={`p-2.5 rounded-lg border flex items-center justify-between text-xs font-medium ${res.passed
-                                ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400'
-                                : 'bg-rose-950/20 border-rose-500/30 text-rose-400'
+                              ? 'bg-emerald-950/20 border-emerald-500/30 text-emerald-400'
+                              : 'bg-rose-950/20 border-rose-500/30 text-rose-400'
                               }`}
                           >
                             <div className="flex items-center gap-2">

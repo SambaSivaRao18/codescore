@@ -1,22 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Users, Code, Plus, Trash2, Edit2, Save, X, PlusCircle, MinusCircle } from 'lucide-react';
+import { Users, Code, Plus, Trash2, Edit2, Save, X, PlusCircle, MinusCircle, Eye, EyeOff } from 'lucide-react';
 
 export default function DatabaseManagement() {
   const API_URL = import.meta.env.VITE_API_URL;
 
   const [activeTab, setActiveTab] = useState('teams');
-  
+
   // Teams State
   const [teams, setTeams] = useState([]);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamPassword, setNewTeamPassword] = useState('');
   const [editingTeam, setEditingTeam] = useState(null);
-  
+  const [showFormPassword, setShowFormPassword] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+
+  const togglePasswordVisibility = (teamID) => {
+    setVisiblePasswords(prev => ({
+      ...prev,
+      [teamID]: !prev[teamID]
+    }));
+  };
+
   // Challenges State
   const [challenges, setChallenges] = useState([]);
   const [editingChallenge, setEditingChallenge] = useState(null);
-  
+
   // Challenge Form State
   const [cLevel, setCLevel] = useState('low');
   const [cTitle, setCTitle] = useState('');
@@ -147,7 +156,7 @@ export default function DatabaseManagement() {
     }
   };
 
-    const handleSaveChallenge = async (e) => {
+  const handleSaveChallenge = async (e) => {
     e.preventDefault();
 
     const payload = {
@@ -196,22 +205,20 @@ export default function DatabaseManagement() {
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-3xl font-bold tracking-tight mb-8">Database Management</h1>
-        
+
         {/* Tabs */}
         <div className="flex gap-4 mb-8">
-          <button 
+          <button
             onClick={() => setActiveTab('teams')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
-              activeTab === 'teams' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-            }`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${activeTab === 'teams' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
           >
             <Users size={18} /> Teams
           </button>
-          <button 
+          <button
             onClick={() => setActiveTab('challenges')}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${
-              activeTab === 'challenges' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-            }`}
+            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${activeTab === 'challenges' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+              }`}
           >
             <Code size={18} /> Coding Challenges
           </button>
@@ -219,75 +226,98 @@ export default function DatabaseManagement() {
 
         {/* Teams Section */}
         {activeTab === 'teams' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1">
-              <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
-                <h2 className="text-xl font-bold mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Plus size={20} /> {editingTeam ? 'Edit Team' : 'Add New Team'}
-                  </div>
-                  {editingTeam && (
-                    <button type="button" onClick={resetTeamForm} className="text-slate-400 hover:text-white p-1">
-                      <X size={20} />
-                    </button>
-                  )}
-                </h2>
-                <form onSubmit={handleSaveTeam} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Team Name</label>
-                    <input 
-                      type="text" 
-                      value={newTeamName} 
-                      onChange={(e) => setNewTeamName(e.target.value)} 
-                      required 
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:border-indigo-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Password {editingTeam && <span className="text-xs text-slate-500">(Leave blank to keep current)</span>}</label>
-                    <input 
-                      type="password" 
-                      value={newTeamPassword} 
-                      onChange={(e) => setNewTeamPassword(e.target.value)} 
-                      required={!editingTeam} 
-                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:border-indigo-500 outline-none"
-                    />
-                  </div>
-                  <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 py-2 rounded-lg font-medium transition-colors">
-                    {editingTeam ? 'Update Team' : 'Create Team'}
+          <div className="flex flex-col gap-8">
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6">
+              <h2 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {editingTeam ? 'EDIT TEAM' : 'ADD NEW TEAM'}
+                </div>
+                {editingTeam && (
+                  <button type="button" onClick={resetTeamForm} className="text-slate-400 hover:text-white p-1">
+                    <X size={20} />
                   </button>
-                </form>
-              </div>
+                )}
+              </h2>
+              <form onSubmit={handleSaveTeam} className="flex flex-col md:flex-row items-end gap-4">
+                <div className="flex-1 w-full">
+                  <label className="block text-sm font-medium text-slate-400 mb-1">Team Name</label>
+                  <input
+                    type="text"
+                    value={newTeamName}
+                    onChange={(e) => setNewTeamName(e.target.value)}
+                    required
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 focus:border-indigo-500 outline-none"
+                  />
+                </div>
+                <div className="flex-1 w-full">
+                  <label className="block text-sm font-medium text-slate-400 mb-1">
+                    Password {editingTeam && <span className="text-xs text-slate-500 font-normal">(Leave blank to keep current)</span>}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showFormPassword ? "text" : "password"}
+                      value={newTeamPassword}
+                      onChange={(e) => setNewTeamPassword(e.target.value)}
+                      required={!editingTeam}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 focus:border-indigo-500 outline-none pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowFormPassword(!showFormPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                    >
+                      {showFormPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>
+                <button type="submit" className="w-full md:w-auto bg-indigo-600 hover:bg-indigo-500 px-8 py-2.5 rounded-lg font-medium transition-colors h-[46px]">
+                  {editingTeam ? 'Update Team' : 'Add Team'}
+                </button>
+              </form>
             </div>
-            
-            <div className="lg:col-span-2">
-              <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
-                <table className="w-full text-left border-collapse">
-                  <thead>
-                    <tr className="bg-slate-800/80 border-b border-slate-700 text-slate-400 text-sm uppercase">
-                      <th className="px-6 py-4 font-medium">ID</th>
-                      <th className="px-6 py-4 font-medium">Team Name</th>
-                      <th className="px-6 py-4 font-medium text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-700/50">
-                    {teams.map(t => (
+
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-800/80 border-b border-slate-700 text-slate-400 text-sm uppercase">
+                    <th className="px-6 py-4 font-medium">ID</th>
+                    <th className="px-6 py-4 font-medium">Team Name</th>
+                    <th className="px-6 py-4 font-medium">Password</th>
+                    <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-700/50">
+                  {teams.slice().sort((a, b) => a.teamName === 'codescore' ? -1 : b.teamName === 'codescore' ? 1 : 0).map((t, idx, arr) => {
+                    const displayId = t.teamName === 'codescore' ? 0 : (arr.some(team => team.teamName === 'codescore') ? idx : idx + 1);
+                    return (
                       <tr key={t.teamID} className="hover:bg-slate-700/30">
-                        <td className="px-6 py-4 text-slate-400">{t.teamID}</td>
-                        <td className="px-6 py-4 font-medium">{t.teamName}</td>
+                        <td className="px-6 py-4 text-indigo-400">{displayId}</td>
+                        <td className="px-6 py-4 font-bold text-white">{t.teamName}</td>
+                        <td className="px-6 py-4 text-slate-400">
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className={visiblePasswords[t.teamID] ? "text-white" : "tracking-widest text-lg"}>
+                              {visiblePasswords[t.teamID] ? t.password : '********'}
+                            </span>
+                            <button onClick={() => togglePasswordVisibility(t.teamID)} className="text-slate-500 hover:text-slate-300">
+                              {visiblePasswords[t.teamID] ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                          </div>
+                        </td>
                         <td className="px-6 py-4 text-right">
-                          <button onClick={() => handleEditTeamClick(t)} className="text-indigo-400 hover:bg-indigo-500/10 p-2 rounded-lg transition-colors mr-2">
-                            <Edit2 size={18} />
-                          </button>
-                          <button onClick={() => handleDeleteTeam(t.teamID)} className="text-red-400 hover:bg-red-500/10 p-2 rounded-lg transition-colors">
-                            <Trash2 size={18} />
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => handleEditTeamClick(t)} className="text-indigo-400 bg-indigo-500/10 hover:bg-indigo-500/20 px-4 py-1.5 rounded-lg transition-colors font-medium text-sm">
+                              Edit
+                            </button>
+                            <button onClick={() => handleDeleteTeam(t.teamID)} className="text-red-400 bg-red-500/10 hover:bg-red-500/20 px-4 py-1.5 rounded-lg transition-colors font-medium text-sm">
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
@@ -308,10 +338,9 @@ export default function DatabaseManagement() {
                   <div key={c.challengeID} className="bg-slate-900 border border-slate-700 p-4 rounded-xl">
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${
-                          c.level === 'low' ? 'bg-emerald-500/10 text-emerald-400' :
+                        <span className={`text-xs font-bold px-2 py-1 rounded uppercase tracking-wider ${c.level === 'low' ? 'bg-emerald-500/10 text-emerald-400' :
                           c.level === 'medium' ? 'bg-amber-500/10 text-amber-400' : 'bg-red-500/10 text-red-400'
-                        }`}>
+                          }`}>
                           {c.level}
                         </span>
                         <h3 className="text-lg font-bold mt-2">{c.title}</h3>
@@ -327,7 +356,7 @@ export default function DatabaseManagement() {
                     </div>
                     <p className="text-slate-400 text-sm line-clamp-2">{c.description}</p>
                     <div className="mt-4 text-xs font-medium text-slate-500">
-                      Marks: {c.marks} | Test Cases: {(() => { try { return JSON.parse(c.testCases).length; } catch(e) { return 0; } })()}
+                      Marks: {c.marks} | Test Cases: {(() => { try { return JSON.parse(c.testCases).length; } catch (e) { return 0; } })()}
                     </div>
                   </div>
                 ))}
@@ -344,13 +373,13 @@ export default function DatabaseManagement() {
                   </button>
                 )}
               </div>
-              
+
               <form onSubmit={handleSaveChallenge} className="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scrollbar">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">Level</label>
-                    <select 
-                      value={cLevel} 
+                    <select
+                      value={cLevel}
                       onChange={(e) => setCLevel(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:border-indigo-500 outline-none"
                     >
@@ -361,11 +390,11 @@ export default function DatabaseManagement() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">Marks</label>
-                    <input 
-                      type="number" 
-                      value={cMarks} 
-                      onChange={(e) => setCMarks(parseInt(e.target.value))} 
-                      required 
+                    <input
+                      type="number"
+                      value={cMarks}
+                      onChange={(e) => setCMarks(parseInt(e.target.value))}
+                      required
                       className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:border-indigo-500 outline-none"
                     />
                   </div>
@@ -373,21 +402,21 @@ export default function DatabaseManagement() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-1">Title</label>
-                  <input 
-                    type="text" 
-                    value={cTitle} 
-                    onChange={(e) => setCTitle(e.target.value)} 
-                    required 
+                  <input
+                    type="text"
+                    value={cTitle}
+                    onChange={(e) => setCTitle(e.target.value)}
+                    required
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:border-indigo-500 outline-none"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-400 mb-1">Description</label>
-                  <textarea 
-                    value={cDescription} 
-                    onChange={(e) => setCDescription(e.target.value)} 
-                    required 
+                  <textarea
+                    value={cDescription}
+                    onChange={(e) => setCDescription(e.target.value)}
+                    required
                     rows={4}
                     className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2 focus:border-indigo-500 outline-none resize-none"
                   />
@@ -401,13 +430,13 @@ export default function DatabaseManagement() {
                       <PlusCircle size={16} /> Add Test Case
                     </button>
                   </div>
-                  
+
                   <div className="space-y-3">
                     {cTestCases.map((tc, idx) => (
                       <div key={idx} className="bg-slate-900 border border-slate-700 rounded-xl p-3 relative group">
                         {cTestCases.length > 1 && (
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             onClick={() => handleRemoveTestCase(idx)}
                             className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                           >
@@ -417,8 +446,8 @@ export default function DatabaseManagement() {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs text-slate-500 mb-1">Input (stdin)</label>
-                            <textarea 
-                              value={tc.input} 
+                            <textarea
+                              value={tc.input}
                               onChange={(e) => handleTestCaseChange(idx, 'input', e.target.value)}
                               className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none h-16 font-mono"
                               placeholder="e.g. 5 10"
@@ -426,8 +455,8 @@ export default function DatabaseManagement() {
                           </div>
                           <div>
                             <label className="block text-xs text-slate-500 mb-1">Expected Output (stdout)</label>
-                            <textarea 
-                              value={tc.expectedOutput} 
+                            <textarea
+                              value={tc.expectedOutput}
                               onChange={(e) => handleTestCaseChange(idx, 'expectedOutput', e.target.value)}
                               className="w-full bg-slate-800 border border-slate-700 rounded p-2 text-sm focus:border-indigo-500 outline-none h-16 font-mono"
                               placeholder="e.g. 15"
@@ -435,7 +464,7 @@ export default function DatabaseManagement() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-800/80">
-                          <input 
+                          <input
                             type="checkbox"
                             id={`tc-hidden-${idx}`}
                             checked={Boolean(tc.isHidden)}
