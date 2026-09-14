@@ -7,7 +7,7 @@ const http = require('http');
 
 const SUPPORTED_LANGUAGES = ['python', 'java', 'c'];
 const DEFAULT_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '45000', 10);
-const MAX_CONCURRENT_EXECUTIONS = parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '20', 10);
+const MAX_CONCURRENT_EXECUTIONS = parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '10', 10);
 const MAX_QUEUE_SIZE = parseInt(process.env.MAX_QUEUE_SIZE || '500', 10);
 
 const MAX_BUFFER_BYTES = 50 * 1024; // 50 KB
@@ -221,7 +221,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
   }
 
   if (Buffer.byteLength(code, 'utf8') > MAX_CODE_SIZE_BYTES) {
-    return { error: `you wrote to mush code then we expect` };
+    return { error: `Code exceeds maximum allowed size (100 KB)` };
   }
 
   // Create isolated temp directory
@@ -267,7 +267,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
         return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
       }
       if (result.isExceededBuffer) {
-        return { error: `to mush output then we expected` };
+        return { error: `Output Limit Exceeded (max 50 KB)` };
       }
 
       return {
@@ -310,7 +310,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
         return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
       }
       if (execRes.isExceededBuffer) {
-        return { error: `to mush output then we expected` };
+        return { error: `Output Limit Exceeded (max 50 KB)` };
       }
 
       return {
@@ -355,7 +355,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
           return { error: `Time Limit Exceeded (${timeoutMs / 1000}s)` };
         }
         if (execRes.isExceededBuffer) {
-          return { error: `to mush output then we expected` };
+          return { error: `Output Limit Exceeded (max 50 KB)` };
         }
 
         return {
