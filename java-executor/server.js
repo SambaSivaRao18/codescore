@@ -14,13 +14,13 @@ const os = require('os');
 const { spawn } = require('child_process');
 
 const app = express();
-app.use(express.json({ limit: '256kb' }));
+app.use(express.json({ limit: '5kb' }));
 
 const PORT = process.env.PORT || 4000;
 const DEFAULT_TIMEOUT_MS = parseInt(process.env.COMPILE_TIMEOUT_MS || '15000', 10);
-const RUN_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '30000', 10);
-const MAX_BUFFER_BYTES = 256 * 1024;
-const MAX_CODE_SIZE_BYTES = 64 * 1024;
+const RUN_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '45000', 10);
+const MAX_BUFFER_BYTES = 20 * 1024; // 20 KB
+const MAX_CODE_SIZE_BYTES = 5 * 1024; // 5 KB
 
 // -- Internal runner -----------------------------------------------------------
 function runProcess(cmd, args, options = {}) {

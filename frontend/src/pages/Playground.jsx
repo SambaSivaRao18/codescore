@@ -30,7 +30,10 @@ export default function Playground() {
   const [submissionResult, setSubmissionResult] = useState(null); // Full submit result
 
   // Timer & Disqualification states
-  const [timerSecondsRemaining, setTimerSecondsRemaining] = useState(3600);
+  const [timerSecondsRemaining, setTimerSecondsRemaining] = useState(() => {
+    const saved = localStorage.getItem('timerSecondsRemaining');
+    return saved !== null ? parseInt(saved, 10) : 3600;
+  });
   const [showTimeExpiredModal, setShowTimeExpiredModal] = useState(false);
   // Success and completion modal states
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -56,9 +59,12 @@ export default function Playground() {
         if (prev <= 1) {
           clearInterval(timerInterval);
           setShowTimeExpiredModal(true);
+          localStorage.setItem('timerSecondsRemaining', '0');
           return 0;
         }
-        return prev - 1;
+        const nextTime = prev - 1;
+        localStorage.setItem('timerSecondsRemaining', nextTime.toString());
+        return nextTime;
       });
     }, 1000);
 
@@ -80,11 +86,12 @@ export default function Playground() {
     // Java code doesn't have a long cold-start delay when students submit.
     fetch(`${API_BASE}/runtimes`).catch(() => { });
 
-    const heartbeat = setInterval(async () => {
+    const runHeartbeat = async () => {
       try {
         const hbRes = await axios.post(`${API_BASE}/heartbeat`, { teamID });
         if (hbRes.data?.timerSecondsRemaining !== undefined) {
           setTimerSecondsRemaining(hbRes.data.timerSecondsRemaining);
+          localStorage.setItem('timerSecondsRemaining', hbRes.data.timerSecondsRemaining.toString());
           if (hbRes.data.isExpired) {
             setShowTimeExpiredModal(true);
           }
@@ -92,7 +99,10 @@ export default function Playground() {
       } catch (err) {
         console.error('Heartbeat failed', err);
       }
-    }, 5000);
+    };
+
+    runHeartbeat(); // Call immediately on mount
+    const heartbeat = setInterval(runHeartbeat, 5000);
 
     // Anti-cheat: prevent copy and paste
     const handleCopyPaste = (e) => {

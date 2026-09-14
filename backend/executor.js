@@ -10,8 +10,8 @@ const DEFAULT_TIMEOUT_MS = parseInt(process.env.DEFAULT_TIMEOUT_MS || '45000', 1
 const MAX_CONCURRENT_EXECUTIONS = parseInt(process.env.MAX_CONCURRENT_EXECUTIONS || '10', 10);
 const MAX_QUEUE_SIZE = parseInt(process.env.MAX_QUEUE_SIZE || '500', 10);
 
-const MAX_BUFFER_BYTES = 50 * 1024; // 50 KB
-const MAX_CODE_SIZE_BYTES = 100 * 1024; // 100 KB
+const MAX_BUFFER_BYTES = 20 * 1024; // 20 KB
+const MAX_CODE_SIZE_BYTES = 5 * 1024; // 5 KB
 
 // --- Execution Queue State ---
 let currentRunning = 0;
@@ -221,7 +221,7 @@ async function _executeCode({ language, code, stdin = '', timeoutMs = DEFAULT_TI
   }
 
   if (Buffer.byteLength(code, 'utf8') > MAX_CODE_SIZE_BYTES) {
-    return { error: `Code exceeds maximum allowed size (100 KB)` };
+    return { error: `Code exceeds maximum allowed size (5 KB)` };
   }
 
   // Create isolated temp directory

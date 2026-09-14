@@ -24,6 +24,9 @@ export default function Login() {
 
       localStorage.setItem('teamID', response.data.teamID);
       localStorage.setItem('teamName', response.data.teamName);
+      if (response.data.timerSecondsRemaining !== undefined) {
+        localStorage.setItem('timerSecondsRemaining', response.data.timerSecondsRemaining);
+      }
 
       navigate('/playground');
     } catch (err) {
