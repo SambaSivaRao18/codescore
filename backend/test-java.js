@@ -10,7 +10,7 @@ public class Main {
 }
 `;
 const stdin = '';
-const timeoutMs = 2000;
+const timeoutMs = 60000;
 
 const body = JSON.stringify({ code, stdin, timeoutMs });
 const url = new URL('/execute', executorUrl);

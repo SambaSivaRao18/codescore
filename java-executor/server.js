@@ -112,7 +112,7 @@ app.post('/execute', async (req, res) => {
     await fs.writeFile(srcPath, code, 'utf8');
 
     // Step 1: Compile
-    const compileRes = await runProcess('javac', ['Main.java'], {
+    const compileRes = await runProcess('javac', ['-J-XX:TieredStopAtLevel=1', '-J-Xverify:none', 'Main.java'], {
       cwd: tempDir,
       timeout: DEFAULT_TIMEOUT_MS,
     });
@@ -125,7 +125,7 @@ app.post('/execute', async (req, res) => {
     }
 
     // Step 2: Run
-    const execRes = await runProcess('java', ['-cp', '.', 'Main'], {
+    const execRes = await runProcess('java', ['-XX:TieredStopAtLevel=1', '-Xverify:none', '-cp', '.', 'Main'], {
       cwd: tempDir,
       stdin,
       timeout: timeoutMs,
