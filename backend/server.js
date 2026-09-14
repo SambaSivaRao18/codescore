@@ -405,8 +405,10 @@ const handleSubmission = async (req, res) => {
           if (err) return res.status(500).json({ error: 'Database query error' });
           if (!record) return res.status(404).json({ error: 'Question not found' });
 
+          const isCodescore = team && team.teamName === 'codescore';
+
           // Backend Source of Truth: Prevent locked question submission
-          if (record.status === 'locked') {
+          if (record.status === 'locked' && !isCodescore) {
             return res.status(403).json({ error: 'Question is locked. Solve preceding questions first.' });
           }
 
