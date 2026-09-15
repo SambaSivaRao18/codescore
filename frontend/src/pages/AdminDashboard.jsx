@@ -47,12 +47,30 @@ export default function AdminDashboard() {
             ADMIN TEAM MANAGEMENT
           </h1>
 
-          <button 
-            onClick={fetchLeaderboard}
-            className="flex items-center gap-2 px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl text-xs font-bold transition-all text-slate-300 active:scale-[0.98]"
-          >
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-          </button>
+          <div className="flex gap-3">
+            <button 
+              onClick={async () => {
+                if (window.confirm('Recalculate all scores?')) {
+                  try {
+                    await axios.get(`${API_URL}/api/admin/fix-scores`);
+                    fetchLeaderboard();
+                    alert('Scores recalculated successfully!');
+                  } catch (e) {
+                    alert('Failed to recalculate scores.');
+                  }
+                }
+              }}
+              className="flex items-center gap-2 px-3.5 py-2 bg-indigo-600/80 hover:bg-indigo-500/80 border border-indigo-500/80 rounded-xl text-xs font-bold transition-all text-white active:scale-[0.98]"
+            >
+              Fix Scores
+            </button>
+            <button 
+              onClick={fetchLeaderboard}
+              className="flex items-center gap-2 px-3.5 py-2 bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/80 rounded-xl text-xs font-bold transition-all text-slate-300 active:scale-[0.98]"
+            >
+              <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+            </button>
+          </div>
         </div>
 
         {/* Search Bar */}

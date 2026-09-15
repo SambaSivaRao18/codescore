@@ -791,6 +791,22 @@ app.get('/api/admin/challenges', (req, res) => {
   });
 });
 
+app.get('/api/admin/fix-scores', (req, res) => {
+  const query = `
+    UPDATE Team
+    SET teamScore = (
+      SELECT COALESCE(SUM(c.marks), 0)
+      FROM student_progress sp
+      JOIN Challenges c ON sp.questionId = c.challengeID
+      WHERE sp.studentId = Team.teamID AND sp.status = 'solved'
+    )
+  `;
+  db.run(query, [], function(err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true, changes: this.changes });
+  });
+});
+
 app.post('/api/admin/challenge', (req, res) => {
   const { level, title, description, marks, testCases, questionNumber } = req.body;
 
