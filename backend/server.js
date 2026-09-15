@@ -466,16 +466,19 @@ const handleSubmission = async (req, res) => {
 
           if (allTestsPassed) {
             const nowIso = new Date().toISOString();
+            const wasAlreadySolved = record.status === 'solved';
 
             // Mark question as solved and record language used
             db.run(
-              `UPDATE student_progress SET status = 'solved', allTestsPassed = 1, solvedAt = ?, solvedLanguage = ? WHERE studentId = ? AND questionId = ?`,
+              `UPDATE student_progress SET status = 'solved', allTestsPassed = 1, solvedAt = COALESCE(solvedAt, ?), solvedLanguage = ? WHERE studentId = ? AND questionId = ?`,
               [nowIso, language, teamID, qId],
               (updateErr) => {
                 if (updateErr) console.error('Failed to update student_progress:', updateErr);
 
-                // Add points to team score
-                db.run(`UPDATE Team SET teamScore = teamScore + ? WHERE teamID = ?`, [record.marks, teamID]);
+                // Add points to team score only if it wasn't already solved
+                if (!wasAlreadySolved) {
+                  db.run(`UPDATE Team SET teamScore = teamScore + ? WHERE teamID = ?`, [record.marks, teamID]);
+                }
 
                 // Unlock the next sequential question
                 db.all(
