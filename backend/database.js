@@ -63,12 +63,45 @@ const db = new sqlite3.Database(dbPath, (err) => {
         db.run(`ALTER TABLE student_progress ADD COLUMN solvedLanguage TEXT`, () => {});
       });
 
-      // Seed dummy data if empty
-      db.get("SELECT COUNT(*) AS count FROM Team", (err, row) => {
-        if (!err && row && row.count === 0) {
-          db.run(`INSERT INTO Team (teamName, password, teamScore) VALUES ('team1', 'password123', 0)`);
-          db.run(`INSERT INTO Team (teamName, password, teamScore) VALUES ('team2', 'password123', 0)`);
-        }
+      // Seed real data (using INSERT OR IGNORE to add them safely if they don't exist)
+      const initialTeams = [
+        { teamName: 'codescore', password: 'samba123' },
+        { teamName: 'phalgunichinni@gmail.com', password: '8897338969' },
+        { teamName: 'varshithadarapaneni@gmail.com', password: '8143571859' },
+        { teamName: 'santhoshkumar2006dommeti@gmail.com', password: '7569641633' },
+        { teamName: 'ramyadungala2@gmail.com', password: '8897308263' },
+        { teamName: 'mounikamadala05@gmail.com', password: '9849332055' },
+        { teamName: 'pavithra6305329127@gmail.com', password: '6305329127' },
+        { teamName: 'ksknani6@gmail.com', password: '7793958103' },
+        { teamName: 'shaikmehatajbegum123@gmail.com', password: '6300437458' },
+        { teamName: 'lohigatta@gmail.com', password: '839454345' },
+        { teamName: 'nehajalapati8@gmail.com', password: '6302276252' },
+        { teamName: 'kavitha62429@gmail.com', password: '9659912777' },
+        { teamName: 'yaswanthipasam15@gmail.com', password: '8341423279' },
+        { teamName: 'ushaswiniindurthi@gmail.com', password: '8919676994' },
+        { teamName: 'komalichebrolu@gmail.com', password: '9121048594' },
+        { teamName: 'chpallavi74@gmail.com', password: '9014570840' },
+        { teamName: 'ravibabukushal@gmail.com', password: '9032504192' },
+        { teamName: 'dr.saitejasri@gmail.com', password: '8074634846' },
+        { teamName: 'iniyam68@gmail.com', password: '9618718221' },
+        { teamName: 'kevsnagaachyuth@gmail.com', password: '7780335379' },
+        { teamName: 'kummithimahendrareddy@gmail.com', password: '7097138529' },
+        { teamName: 'ruksaarmohammad14@gmail.com', password: '9390579993' },
+        { teamName: 'neelapuchetan045@gmail.com', password: '9346690245' },
+        { teamName: 'pallilokesh1993@gmail.com', password: '8096575880' },
+        { teamName: 's40823829@gmail.com', password: '7013862633' },
+        { teamName: 'rashid14102008@gmail.com', password: '8340857003' },
+        { teamName: 'team', password: '123' }
+      ];
+
+      initialTeams.forEach(team => {
+        db.run(
+          `INSERT OR IGNORE INTO Team (teamName, password, teamScore) VALUES (?, ?, 0)`,
+          [team.teamName, team.password],
+          (err) => {
+            if (err) console.error("Error seeding team:", team.teamName, err.message);
+          }
+        );
       });
 
       db.get("SELECT COUNT(*) AS count FROM Challenges", (err, row) => {
