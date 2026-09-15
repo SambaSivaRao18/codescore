@@ -85,7 +85,7 @@ function ensureStudentProgress(teamID) {
 }
 
 function getTimerDetails(firstLoginAt, teamName = null) {
-  const TOTAL_DURATION_SECONDS = 3600; // 1 hour total competition duration
+  const TOTAL_DURATION_SECONDS = 600; // 10 minutes total competition duration
 
   if (teamName === 'codescore') {
     return {
@@ -233,11 +233,12 @@ app.get('/api/questions', async (req, res) => {
         const finalStatus = isPscmr ? (q.status === 'solved' ? 'solved' : 'open') : q.status;
         const isLocked = finalStatus === 'locked';
 
-        // Filter hidden test cases from standard list returned to client
         const publicTestCases = testCases
-          .filter(tc => !tc.isHidden)
-          .map((tc, idx) => ({
+          .map((tc, originalIndex) => ({ tc, originalIndex }))
+          .filter(({ tc }) => !tc.isHidden)
+          .map(({ tc, originalIndex }, idx) => ({
             testCaseNumber: idx + 1,
+            originalIndex,
             input: tc.input,
             expectedOutput: tc.expectedOutput,
             isHidden: false
@@ -326,9 +327,11 @@ app.get('/api/challenge', async (req, res) => {
             } catch (e) { }
 
             const publicTestCases = testCases
-              .filter(tc => !tc.isHidden)
-              .map((tc, idx) => ({
+              .map((tc, originalIndex) => ({ tc, originalIndex }))
+              .filter(({ tc }) => !tc.isHidden)
+              .map(({ tc, originalIndex }, idx) => ({
                 testCaseNumber: idx + 1,
+                originalIndex,
                 input: tc.input,
                 expectedOutput: tc.expectedOutput,
                 isHidden: false

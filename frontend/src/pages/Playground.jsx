@@ -55,6 +55,9 @@ export default function Playground() {
   // Competition Countdown Timer Interval (1 second step)
   useEffect(() => {
     const timerInterval = setInterval(() => {
+      const currentTeam = localStorage.getItem('teamName');
+      if (currentTeam === 'codescore') return;
+
       setTimerSecondsRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timerInterval);
@@ -202,7 +205,7 @@ export default function Playground() {
         language,
         code,
         questionId: challenge.questionId,
-        testCaseIndex: activeTestCaseTab,
+        testCaseIndex: challenge.testCases[activeTestCaseTab]?.originalIndex ?? activeTestCaseTab,
       });
 
       const result = res.data;
